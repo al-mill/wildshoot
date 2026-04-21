@@ -24,7 +24,7 @@ The flow looks like:
 Nuxt app → API Gateway → Lambda Authorizer → Our business logic
 ```
 
-Why this works:
+## Why this works:
 
 - Cognito handles all the annoying user management stuff (passwords, email verification, etc.)
 - Our Lambda authorizer does the photo ownership checks and custom logic
