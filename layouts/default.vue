@@ -1,5 +1,24 @@
 <template>
-  <div>
-    <slot />
+  <div class="layout">
+    <AppHeader />
+    <main class="main">
+      <slot />
+    </main>
   </div>
 </template>
+
+<style scoped>
+.layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main {
+  flex: 1;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+</style>

@@ -53,8 +53,7 @@ export default defineConfig({
     // Global test configuration
     globals: true,
     
-    // Transform configuration
-    transformMode: {
+    testTransformMode: {
       web: [/\.[jt]sx?$/, /\.vue$/],
     },
   },

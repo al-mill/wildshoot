@@ -1,5 +1,6 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  compatibilityDate: '2026-05-19',
   devtools: { enabled: true },
 
   // TypeScript configuration
@@ -7,8 +8,7 @@ export default defineNuxtConfig({
     typeCheck: true,
   },
 
-  // CSS framework (optional - can add Tailwind, etc.)
-  css: [],
+  css: ['~/assets/css/main.css'],
 
   // Modules
   modules: ['@nuxt/image', '@pinia/nuxt'],
@@ -58,11 +58,7 @@ export default defineNuxtConfig({
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        {
-          hid: 'description',
-          name: 'description',
-          content: 'A DevOps-focused photo-sharing application built on AWS',
-        },
+        { name: 'description', content: 'A DevOps-focused photo-sharing application built on AWS' },
       ],
       link: [{ rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }],
     },

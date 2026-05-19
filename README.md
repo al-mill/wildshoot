@@ -1,120 +1,117 @@
-# Wild Shoot 📸
+# Wild Shoot
 
-A DevOps-focused photo-sharing application that enables users to upload photos with location metadata while providing administrators with comprehensive analytics. Built entirely on AWS free tier services with emphasis on infrastructure automation, CI/CD practices, and scalable architecture.
+A photo-sharing app with location tagging, built on AWS free tier. Users upload photos, admins get analytics. Infrastructure managed with AWS CDK.
 
-## Features
+## Tech Stack
 
-### User Features
-
-- 🔐 User authentication with profile pictures (AWS Cognito)
-- 📤 Photo upload with location tagging and optional descriptions
-- 👀 Photo preview before submission
-- 📱 Responsive web interface
-
-### Admin Features
-
-- 📊 User analytics dashboard showing upload counts per user
-- 📍 Location-based photo statistics and filtering
-- 📄 Paginated photo gallery with administrative controls
-- 👥 User management with photo count statistics
-
-## Tech Stack (TDB)
-
-- **Frontend:** Nuxt 3/Vue 3 with TypeScript
-- **Backend:** AWS Lambda (Serverless)
-- **Database:** PostgreSQL on AWS RDS
-- **Storage:** AWS S3 + CloudFront CDN
-- **Authentication:** AWS Cognito
-- **Infrastructure:** AWS CDK (Infrastructure as Code)
+- **Frontend:** Nuxt 3 / Vue 3 / TypeScript
+- **Infrastructure:** AWS CDK (TypeScript)
+- **Compute:** AWS Lambda
+- **Database:** PostgreSQL on RDS
+- **Storage:** S3 + CloudFront
+- **Auth:** AWS Cognito
 - **CI/CD:** GitHub Actions
 
-## Getting Started
+## Local Development
 
 ### Prerequisites
 
-- Node.js 18+
-- AWS CLI configured
-- AWS CDK CLI installed
-- PostgreSQL (for local development)
+- Node.js >= 20.19.0 (see `.nvmrc`)
+- AWS CLI configured with credentials
+- AWS CDK CLI (`npm install -g aws-cdk`)
 
-### Installation
+### Setup
 
-1. Clone the repository:
+```bash
+git clone https://github.com/al-mill/wildshoot.git
+cd wildshoot
+npm install
+cp .env.example .env
+```
 
-   ```bash
-   git clone https://github.com/al-mill/wildshoot.git
-   cd wildshoot
-   ```
+No AWS credentials are needed to run the frontend locally — the stores use mock data until the backend is deployed.
 
-2. Install dependencies:
+### Run the dev server
 
-   ```bash
-   npm install
-   ```
+```bash
+npm run dev
+# → http://localhost:3000
+```
 
-3. Set up environment variables:
+**Test credentials (mock only):**
 
-   ```bash
-   cp .env.example .env
-   # Edit .env with your configuration
-   ```
+| Role | Email | Password |
+|---|---|---|
+| User | `any@example.com` | anything |
+| Admin | `admin@example.com` | anything |
 
-4. Deploy infrastructure (staging):
+Any email starting with `admin` grants access to the `/admin` routes.
 
-   ```bash
-   npm run deploy:staging
-   ```
+### Scripts
 
-5. Start development server:
-   ```bash
-   npm run dev
-   ```
+| Command | Description |
+|---|---|
+| `npm run dev` | Start Nuxt dev server |
+| `npm run build` | Build for production |
+| `npm run preview` | Preview production build |
+| `npm run test` | Run unit tests |
+| `npm run lint` | Run ESLint |
+| `npm run type-check` | TypeScript type check |
+
+### CDK scripts
+
+| Command | Description |
+|---|---|
+| `npm run cdk:synth` | Synthesise CloudFormation template |
+| `npm run deploy:staging` | Deploy to staging |
+| `npm run deploy:production` | Deploy to production |
+| `npm run bootstrap` | Bootstrap CDK in a new AWS account/region |
 
 ## Project Structure
 
 ```
 wildshoot/
-├── cdk/                 # AWS CDK infrastructure code
-├── frontend/            # Nuxt 3 frontend application
-├── lambda/             # Lambda function source code
-├── database/           # Database schemas and migrations
-├── .github/workflows/  # GitHub Actions CI/CD
-└── docs/              # Documentation
+├── assets/css/          # Global CSS (design tokens)
+├── cdk/
+│   ├── bin/app.ts       # CDK entry point
+│   └── lib/stacks/      # Stack definitions
+├── components/
+│   ├── admin/           # Admin-only components
+│   ├── AppHeader.vue
+│   ├── PhotoCard.vue
+│   ├── PhotoGrid.vue
+│   └── UploadForm.vue
+├── composables/         # useApi — fetch wrapper for real API calls
+├── layouts/
+│   ├── default.vue      # Main layout with header
+│   └── admin.vue        # Admin layout with sidebar
+├── middleware/
+│   ├── auth.ts          # Redirect unauthenticated users
+│   └── admin.ts         # Restrict to admin users
+├── pages/
+│   ├── index.vue        # Photo feed / landing
+│   ├── login.vue
+│   ├── register.vue
+│   ├── upload.vue
+│   └── admin/           # Dashboard, users, photos
+├── stores/              # Pinia stores (mock data — swap for real API)
+│   ├── auth.ts
+│   ├── photos.ts
+│   └── admin.ts
+└── types/index.ts       # Shared TypeScript types
 ```
 
-## Development
+## Connecting to the Real Backend
 
-### Available Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run generate` - Generate static site
-- `npm run preview` - Preview production build
-- `npm run test` - Run tests
-- `npm run lint` - Run ESLint
-- `npm run deploy:staging` - Deploy to staging
-- `npm run deploy:production` - Deploy to production
-
-### Environment Variables
-
-See `.env.example` for required environment variables.
+Each store action has a `// TODO:` comment showing the API endpoint to replace the mock with. Once the backend is deployed, swap the mock `wait()` calls for the corresponding `useApi()` calls from `composables/useApi.ts`.
 
 ## Deployment
 
-The application uses blue/green deployment through GitHub Actions:
+Staging and production are separate CDK stacks deployed via GitHub Actions:
 
-1. Push to `staging` branch triggers deployment to staging environment
-2. Push to `main` branch triggers deployment to production environment
-3. Infrastructure changes are managed through AWS CDK
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+- Push to `main` → deploy to staging
+- Manual approval → deploy to production
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT
