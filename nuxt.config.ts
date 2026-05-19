@@ -45,12 +45,6 @@ export default defineNuxtConfig({
   // Server-side rendering configuration
   ssr: true,
 
-  // Generate configuration for static deployment
-  nitro: {
-    preset: 'aws-amplify',
-    // Can also use 's3' preset for static deployment to S3
-  },
-
   // App configuration
   app: {
     head: {
