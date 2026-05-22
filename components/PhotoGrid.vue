@@ -9,8 +9,8 @@
 </template>
 
 <script setup lang="ts">
-import type { Photo } from '~/types'
-defineProps<{ photos: Photo[]; isLoading: boolean }>()
+import type { Photo } from '~/types';
+defineProps<{ photos: Photo[]; isLoading: boolean }>();
 </script>
 
 <style scoped>

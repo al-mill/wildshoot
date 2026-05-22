@@ -1,25 +1,25 @@
-import { config } from '@vue/test-utils'
-import { vi } from 'vitest'
+import { config } from '@vue/test-utils';
+import { vi } from 'vitest';
 
-config.global.mocks = {}
+config.global.mocks = {};
 
-vi.stubGlobal('defineNuxtConfig', () => ({}))
-vi.stubGlobal('navigateTo', vi.fn())
+vi.stubGlobal('defineNuxtConfig', () => ({}));
+vi.stubGlobal('navigateTo', vi.fn());
 vi.stubGlobal('useRouter', () => ({
   push: vi.fn(),
   replace: vi.fn(),
   go: vi.fn(),
   back: vi.fn(),
   forward: vi.fn(),
-}))
+}));
 vi.stubGlobal('useRoute', () => ({
   path: '/',
   params: {},
   query: {},
-}))
-vi.stubGlobal('useSeoMeta', vi.fn())
-vi.stubGlobal('useHead', vi.fn())
-vi.stubGlobal('fetch', vi.fn())
+}));
+vi.stubGlobal('useSeoMeta', vi.fn());
+vi.stubGlobal('useHead', vi.fn());
+vi.stubGlobal('fetch', vi.fn());
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -33,4 +33,4 @@ Object.defineProperty(window, 'matchMedia', {
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   })),
-})
+});

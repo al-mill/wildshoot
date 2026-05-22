@@ -7,11 +7,23 @@
       <form @submit.prevent="handleSubmit">
         <label class="field">
           Name
-          <input v-model="name" type="text" class="input" placeholder="Your name" required />
+          <input
+            v-model="name"
+            type="text"
+            class="input"
+            placeholder="Your name"
+            required
+          />
         </label>
         <label class="field">
           Email
-          <input v-model="email" type="email" class="input" placeholder="you@example.com" required />
+          <input
+            v-model="email"
+            type="email"
+            class="input"
+            placeholder="you@example.com"
+            required
+          />
         </label>
         <label class="field">
           Password
@@ -32,24 +44,26 @@
         </button>
       </form>
 
-      <p class="footer-link">Already have an account? <NuxtLink to="/login">Log in</NuxtLink></p>
+      <p class="footer-link">
+        Already have an account? <NuxtLink to="/login">Log in</NuxtLink>
+      </p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'default' })
+definePageMeta({ layout: 'default' });
 
-const auth = useAuthStore()
-const router = useRouter()
+const auth = useAuthStore();
+const router = useRouter();
 
-const name = ref('')
-const email = ref('')
-const password = ref('')
+const name = ref('');
+const email = ref('');
+const password = ref('');
 
 async function handleSubmit() {
-  await auth.register(name.value, email.value, password.value)
-  if (!auth.error) router.push('/')
+  await auth.register(name.value, email.value, password.value);
+  if (!auth.error) router.push('/');
 }
 </script>
 

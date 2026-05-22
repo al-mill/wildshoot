@@ -5,8 +5,12 @@
 
       <nav class="nav">
         <NuxtLink to="/" class="nav-link">Feed</NuxtLink>
-        <NuxtLink v-if="auth.isLoggedIn" to="/upload" class="nav-link">Upload</NuxtLink>
-        <NuxtLink v-if="auth.isAdmin" to="/admin" class="nav-link">Admin</NuxtLink>
+        <NuxtLink v-if="auth.isLoggedIn" to="/upload" class="nav-link"
+          >Upload</NuxtLink
+        >
+        <NuxtLink v-if="auth.isAdmin" to="/admin" class="nav-link"
+          >Admin</NuxtLink
+        >
       </nav>
 
       <div class="auth">
@@ -24,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-const auth = useAuthStore()
+const auth = useAuthStore();
 </script>
 
 <style scoped>
@@ -68,7 +72,9 @@ const auth = useAuthStore()
   border-radius: var(--radius-sm);
   color: var(--color-text-muted);
   font-size: 0.9rem;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .nav-link:hover,

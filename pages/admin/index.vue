@@ -8,16 +8,25 @@
       <div class="stats-grid">
         <AdminStatsCard label="Total Users" :value="admin.stats.totalUsers" />
         <AdminStatsCard label="Total Photos" :value="admin.stats.totalPhotos" />
-        <AdminStatsCard label="Unique Locations" :value="admin.stats.totalLocations" />
+        <AdminStatsCard
+          label="Unique Locations"
+          :value="admin.stats.totalLocations"
+        />
       </div>
 
       <section class="section">
         <h2 class="section-title">Top Locations</h2>
         <div class="location-list">
-          <div v-for="(loc, i) in admin.stats.topLocations" :key="loc.name" class="location-row">
+          <div
+            v-for="(loc, i) in admin.stats.topLocations"
+            :key="loc.name"
+            class="location-row"
+          >
             <span class="loc-rank">{{ i + 1 }}</span>
             <span class="loc-name">{{ loc.name }}</span>
-            <span class="loc-count">{{ loc.count }} photo{{ loc.count !== 1 ? 's' : '' }}</span>
+            <span class="loc-count"
+              >{{ loc.count }} photo{{ loc.count !== 1 ? 's' : '' }}</span
+            >
           </div>
         </div>
       </section>
@@ -26,11 +35,11 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ middleware: 'admin', layout: 'admin' })
+definePageMeta({ middleware: 'admin', layout: 'admin' });
 
-const admin = useAdminStore()
+const admin = useAdminStore();
 
-onMounted(() => admin.fetchStats())
+onMounted(() => admin.fetchStats());
 </script>
 
 <style scoped>

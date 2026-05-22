@@ -32,7 +32,7 @@ export class DatabaseConstruct extends Construct {
       }),
       instanceType: ec2.InstanceType.of(
         ec2.InstanceClass.T2,
-        ec2.InstanceSize.MICRO,
+        ec2.InstanceSize.MICRO
       ),
       vpc: props.vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_ISOLATED },

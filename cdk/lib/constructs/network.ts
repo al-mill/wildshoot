@@ -36,7 +36,7 @@ export class NetworkConstruct extends Construct {
     this.vpc.addInterfaceEndpoint('CognitoEndpoint', {
       service: new ec2.InterfaceVpcEndpointService(
         `com.amazonaws.${cdk.Stack.of(this).region}.cognito-idp`,
-        443,
+        443
       ),
       privateDnsEnabled: true,
     });
@@ -62,7 +62,7 @@ export class NetworkConstruct extends Construct {
     this.dbSecurityGroup.addIngressRule(
       this.lambdaSecurityGroup,
       ec2.Port.tcp(5432),
-      'Allow Lambda to connect to RDS',
+      'Allow Lambda to connect to RDS'
     );
   }
 }

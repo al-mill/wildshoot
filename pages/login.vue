@@ -7,7 +7,13 @@
       <form @submit.prevent="handleSubmit">
         <label class="field">
           Email
-          <input v-model="email" type="email" class="input" placeholder="you@example.com" required />
+          <input
+            v-model="email"
+            type="email"
+            class="input"
+            placeholder="you@example.com"
+            required
+          />
         </label>
         <label class="field">
           Password
@@ -35,17 +41,17 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'default' })
+definePageMeta({ layout: 'default' });
 
-const auth = useAuthStore()
-const router = useRouter()
+const auth = useAuthStore();
+const router = useRouter();
 
-const email = ref('')
-const password = ref('')
+const email = ref('');
+const password = ref('');
 
 async function handleSubmit() {
-  await auth.login(email.value, password.value)
-  if (!auth.error) router.push('/')
+  await auth.login(email.value, password.value);
+  if (!auth.error) router.push('/');
 }
 </script>
 
