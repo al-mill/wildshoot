@@ -54,15 +54,16 @@ jobs:
           echo "lambda=$LAMBDA_CHANGED" >> $GITHUB_OUTPUT
           echo "frontend=$FRONTEND_CHANGED" >> $GITHUB_OUTPUT
 
-          # Build summary lines (use printf for reliable newline handling)
-          {
-            echo "summary<<ENDSUMMARY"
-            [ "$CDK_CHANGED" -gt 0 ] && printf "- **Infrastructure (CDK):** %s file(s) changed — stack will be updated on merge\n" "$CDK_CHANGED"
-            [ "$LAMBDA_CHANGED" -gt 0 ] && printf "- **Lambda functions:** %s file(s) changed\n" "$LAMBDA_CHANGED"
-            [ "$FRONTEND_CHANGED" -gt 0 ] && printf "- **Frontend:** %s file(s) changed\n" "$FRONTEND_CHANGED"
-            [ "$CDK_CHANGED" -eq 0 ] && [ "$LAMBDA_CHANGED" -eq 0 ] && [ "$FRONTEND_CHANGED" -eq 0 ] && echo "- No service files changed"
-            echo "ENDSUMMARY"
-          } >> "$GITHUB_OUTPUT"
+          # Build summary as a plain variable, then write with heredoc delimiter
+          SUMMARY=""
+          [ "$CDK_CHANGED" -gt 0 ] && SUMMARY="${SUMMARY}* **Infrastructure (CDK):** ${CDK_CHANGED} file(s) changed — stack will be updated on merge\n"
+          [ "$LAMBDA_CHANGED" -gt 0 ] && SUMMARY="${SUMMARY}* **Lambda functions:** ${LAMBDA_CHANGED} file(s) changed\n"
+          [ "$FRONTEND_CHANGED" -gt 0 ] && SUMMARY="${SUMMARY}* **Frontend:** ${FRONTEND_CHANGED} file(s) changed\n"
+          [ -z "$SUMMARY" ] && SUMMARY="* No service files changed\n"
+
+          echo "summary<<__OUTPUT__" >> "$GITHUB_OUTPUT"
+          echo -e "$SUMMARY" >> "$GITHUB_OUTPUT"
+          echo "__OUTPUT__" >> "$GITHUB_OUTPUT"
 
       - name: Post service summary to PR
         uses: actions/github-script@v7
