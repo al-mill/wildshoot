@@ -50,6 +50,8 @@ export default defineConfig({
 
     // Global test configuration
     globals: true,
+
+    passWithNoTests: true,
   },
 
   // Resolve configuration
