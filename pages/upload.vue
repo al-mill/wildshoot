@@ -6,12 +6,12 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ middleware: 'auth' })
+definePageMeta({ middleware: 'auth' });
 
-const router = useRouter()
+const router = useRouter();
 
 function onUploaded() {
-  setTimeout(() => router.push('/'), 1200)
+  setTimeout(() => router.push('/'), 1200);
 }
 </script>
 

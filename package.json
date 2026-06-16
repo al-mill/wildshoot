@@ -14,12 +14,12 @@
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:coverage": "vitest --coverage",
-    "cdk:synth": "cdk synth",
-    "cdk:deploy": "cdk deploy",
-    "cdk:destroy": "cdk destroy",
-    "deploy:staging": "cdk deploy --context stage=staging",
-    "deploy:production": "cdk deploy --context stage=production",
-    "bootstrap": "cdk bootstrap",
+    "cdk:synth": "dotenv -- cdk synth",
+    "cdk:deploy": "dotenv -- cdk deploy",
+    "cdk:destroy": "dotenv -- cdk destroy",
+    "deploy:staging": "dotenv -- cdk deploy --context stage=staging",
+    "deploy:production": "dotenv -- cdk deploy --context stage=production",
+    "bootstrap": "dotenv -- cdk bootstrap",
     "prepare": "husky install"
   },
   "keywords": [
@@ -45,11 +45,15 @@
   "dependencies": {
     "@nuxt/image": "^1.7.0",
     "@pinia/nuxt": "^0.5.1",
+    "aws-jwt-verify": "^5.1.1",
     "nuxt": "^3.11.2",
+    "pg": "^8.21.0",
     "pinia": "^2.1.7",
     "vue": "^3.4.21"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.161",
+    "@types/pg": "^8.20.0",
     "@nuxt/eslint-config": "^0.3.13",
     "@nuxt/test-utils": "^3.12.1",
     "@types/node": "^20.19.41",
@@ -60,6 +64,7 @@
     "aws-cdk": "^2.139.0",
     "aws-cdk-lib": "^2.139.0",
     "constructs": "^10.3.0",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.3",

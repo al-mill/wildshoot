@@ -29,12 +29,16 @@
 </template>
 
 <script setup lang="ts">
-import type { User } from '~/types'
+import type { User } from '~/types';
 
-defineProps<{ users: User[] }>()
+defineProps<{ users: User[] }>();
 
 function fmt(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
 </script>
 

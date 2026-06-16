@@ -1,0 +1,105 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint / Typecheck / Test / Synth
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run type-check
+
+      - run: npm run test
+
+      - name: CDK synth (validate infrastructure)
+        env:
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.CDK_DEFAULT_ACCOUNT }}
+          CDK_DEFAULT_REGION: ${{ secrets.CDK_DEFAULT_REGION || 'us-west-2' }}
+        run: npx cdk synth
+
+  changes:
+    name: Summarise changed services
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed services
+        id: diff
+        run: |
+          BASE=${{ github.event.pull_request.base.sha }}
+          HEAD=${{ github.event.pull_request.head.sha }}
+
+          CDK_CHANGED=$(git diff --name-only $BASE $HEAD | (grep '^cdk/' || true) | wc -l | tr -d ' ')
+          LAMBDA_CHANGED=$(git diff --name-only $BASE $HEAD | (grep '^lambda/' || true) | wc -l | tr -d ' ')
+          FRONTEND_CHANGED=$(git diff --name-only $BASE $HEAD | (grep -E '^(pages|components|composables|stores|layouts)/' || true) | wc -l | tr -d ' ')
+
+          echo "cdk=$CDK_CHANGED" >> $GITHUB_OUTPUT
+          echo "lambda=$LAMBDA_CHANGED" >> $GITHUB_OUTPUT
+          echo "frontend=$FRONTEND_CHANGED" >> $GITHUB_OUTPUT
+
+          # Build summary as a plain variable, then write with heredoc delimiter
+          SUMMARY=""
+          [ "$CDK_CHANGED" -gt 0 ] && SUMMARY="${SUMMARY}* **Infrastructure (CDK):** ${CDK_CHANGED} file(s) changed — stack will be updated on merge\n"
+          [ "$LAMBDA_CHANGED" -gt 0 ] && SUMMARY="${SUMMARY}* **Lambda functions:** ${LAMBDA_CHANGED} file(s) changed\n"
+          [ "$FRONTEND_CHANGED" -gt 0 ] && SUMMARY="${SUMMARY}* **Frontend:** ${FRONTEND_CHANGED} file(s) changed\n"
+          [ -z "$SUMMARY" ] && SUMMARY="* No service files changed\n"
+
+          echo "summary<<__OUTPUT__" >> "$GITHUB_OUTPUT"
+          echo -e "$SUMMARY" >> "$GITHUB_OUTPUT"
+          echo "__OUTPUT__" >> "$GITHUB_OUTPUT"
+
+      - name: Post service summary to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const lines = `${{ steps.diff.outputs.summary }}`;
+            const body = `## Services affected by this PR\n\n${lines}\n\n_Merging to \`main\` will deploy these changes to **staging** automatically._`;
+
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.data.find(c =>
+              c.user.login === 'github-actions[bot]' &&
+              c.body.startsWith('## Services affected')
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

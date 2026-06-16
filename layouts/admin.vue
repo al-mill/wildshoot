@@ -4,11 +4,19 @@
     <div class="body">
       <nav class="sidebar">
         <p class="sidebar-heading">Admin</p>
-        <NuxtLink to="/admin" class="sidebar-link" :class="{ active: route.path === '/admin' }">
+        <NuxtLink
+          to="/admin"
+          class="sidebar-link"
+          :class="{ active: route.path === '/admin' }"
+        >
           Dashboard
         </NuxtLink>
-        <NuxtLink to="/admin/photos" class="sidebar-link" active-class="active">Photos</NuxtLink>
-        <NuxtLink to="/admin/users" class="sidebar-link" active-class="active">Users</NuxtLink>
+        <NuxtLink to="/admin/photos" class="sidebar-link" active-class="active"
+          >Photos</NuxtLink
+        >
+        <NuxtLink to="/admin/users" class="sidebar-link" active-class="active"
+          >Users</NuxtLink
+        >
       </nav>
       <main class="main">
         <slot />
@@ -18,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-const route = useRoute()
+const route = useRoute();
 </script>
 
 <style scoped>
@@ -63,7 +71,9 @@ const route = useRoute()
   border-radius: var(--radius-sm);
   color: var(--color-text-muted);
   font-size: 0.9rem;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .sidebar-link:hover,
