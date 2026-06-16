@@ -4,7 +4,9 @@ export const useApi = () => {
   const base = config.public.apiUrl as string
 
   async function get<T>(path: string): Promise<T> {
-    const res = await fetch(`${base}${path}`, { headers: { 'Content-Type': 'application/json' } })
+    const res = await fetch(`${base}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+    })
     if (!res.ok) throw new Error(`${res.status} ${path}`)
     return res.json() as Promise<T>
   }

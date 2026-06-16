@@ -23,18 +23,24 @@
         </thead>
         <tbody>
           <tr v-for="photo in paginated" :key="photo.id">
-            <td><img :src="photo.thumbnailUrl" :alt="photo.title" class="thumb" /></td>
+            <td>
+              <img :src="photo.thumbnailUrl" :alt="photo.title" class="thumb" />
+            </td>
             <td>{{ photo.title }}</td>
             <td class="muted">{{ photo.location }}</td>
             <td class="muted">{{ photo.userName }}</td>
             <td class="muted">{{ fmt(photo.uploadedAt) }}</td>
             <td>
-              <button class="btn-delete" @click="emit('delete', photo.id)">Delete</button>
+              <button class="btn-delete" @click="emit('delete', photo.id)">
+                Delete
+              </button>
             </td>
           </tr>
         </tbody>
       </table>
-      <p v-if="paginated.length === 0" class="empty">No photos match the filter.</p>
+      <p v-if="paginated.length === 0" class="empty">
+        No photos match the filter.
+      </p>
     </div>
 
     <div v-if="totalPages > 1" class="pager">
@@ -57,10 +63,14 @@ const page = ref(1)
 
 const filtered = computed(() => {
   const q = locationFilter.value.toLowerCase()
-  return q ? props.photos.filter(p => p.location.toLowerCase().includes(q)) : props.photos
+  return q
+    ? props.photos.filter(p => p.location.toLowerCase().includes(q))
+    : props.photos
 })
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / PAGE_SIZE)))
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(filtered.value.length / PAGE_SIZE))
+)
 
 const paginated = computed(() => {
   const start = (page.value - 1) * PAGE_SIZE
@@ -72,7 +82,11 @@ watch(locationFilter, () => {
 })
 
 function fmt(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
 }
 </script>
 

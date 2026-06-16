@@ -34,7 +34,11 @@ import type { User } from '~/types'
 defineProps<{ users: User[] }>()
 
 function fmt(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
 }
 </script>
 

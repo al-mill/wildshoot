@@ -7,7 +7,13 @@
       <form @submit.prevent="handleSubmit">
         <label class="field">
           Email
-          <input v-model="email" type="email" class="input" placeholder="you@example.com" required />
+          <input
+            v-model="email"
+            type="email"
+            class="input"
+            placeholder="you@example.com"
+            required
+          />
         </label>
         <label class="field">
           Password

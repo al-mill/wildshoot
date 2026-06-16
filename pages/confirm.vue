@@ -36,18 +36,18 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'default' });
+definePageMeta({ layout: 'default' })
 
-const auth = useAuthStore();
-const router = useRouter();
-const route = useRoute();
+const auth = useAuthStore()
+const router = useRouter()
+const route = useRoute()
 
-const email = computed(() => String(route.query.email ?? ''));
-const code = ref('');
+const email = computed(() => String(route.query.email ?? ''))
+const code = ref('')
 
 async function handleSubmit() {
-  const ok = await auth.confirmSignUp(email.value, code.value);
-  if (ok) router.push('/login');
+  const ok = await auth.confirmSignUp(email.value, code.value)
+  if (ok) router.push('/login')
 }
 </script>
 

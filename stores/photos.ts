@@ -82,7 +82,11 @@ export const usePhotosStore = defineStore('photos', () => {
     isLoading.value = false
   }
 
-  async function uploadPhoto(file: File, location: string, description: string): Promise<Photo> {
+  async function uploadPhoto(
+    file: File,
+    location: string,
+    description: string
+  ): Promise<Photo> {
     isLoading.value = true
     await wait(800) // TODO: POST /api/photos (multipart)
     const photo: Photo = {

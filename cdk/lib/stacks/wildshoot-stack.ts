@@ -1,13 +1,13 @@
-import * as cdk from 'aws-cdk-lib';
-import { Construct } from 'constructs';
+import * as cdk from 'aws-cdk-lib'
+import { Construct } from 'constructs'
 
 interface WildshootStackProps extends cdk.StackProps {
-  stage: string;
+  stage: string
 }
 
 export class WildshootStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: WildshootStackProps) {
-    super(scope, id, props);
+    super(scope, id, props)
 
     // Phase 2: Auth — Cognito user pool
     // Phase 2: Database — RDS PostgreSQL + VPC

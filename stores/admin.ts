@@ -3,10 +3,38 @@ import type { User, AdminStats } from '~/types'
 const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
 
 const MOCK_USERS: User[] = [
-  { id: '1', name: 'Alex Miller', email: 'alex@example.com', photoCount: 1, joinedAt: '2024-03-01T00:00:00Z', isAdmin: true },
-  { id: '2', name: 'Jordan Chen', email: 'jordan@example.com', photoCount: 2, joinedAt: '2024-03-15T00:00:00Z', isAdmin: false },
-  { id: '3', name: 'Sam Rivera', email: 'sam@example.com', photoCount: 2, joinedAt: '2024-04-01T00:00:00Z', isAdmin: false },
-  { id: '4', name: 'Taylor Kim', email: 'taylor@example.com', photoCount: 1, joinedAt: '2024-04-20T00:00:00Z', isAdmin: false },
+  {
+    id: '1',
+    name: 'Alex Miller',
+    email: 'alex@example.com',
+    photoCount: 1,
+    joinedAt: '2024-03-01T00:00:00Z',
+    isAdmin: true,
+  },
+  {
+    id: '2',
+    name: 'Jordan Chen',
+    email: 'jordan@example.com',
+    photoCount: 2,
+    joinedAt: '2024-03-15T00:00:00Z',
+    isAdmin: false,
+  },
+  {
+    id: '3',
+    name: 'Sam Rivera',
+    email: 'sam@example.com',
+    photoCount: 2,
+    joinedAt: '2024-04-01T00:00:00Z',
+    isAdmin: false,
+  },
+  {
+    id: '4',
+    name: 'Taylor Kim',
+    email: 'taylor@example.com',
+    photoCount: 1,
+    joinedAt: '2024-04-20T00:00:00Z',
+    isAdmin: false,
+  },
 ]
 
 const MOCK_STATS: AdminStats = {

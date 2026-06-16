@@ -1,6 +1,11 @@
 <template>
   <article class="card">
-    <img :src="photo.thumbnailUrl" :alt="photo.title" class="image" loading="lazy" />
+    <img
+      :src="photo.thumbnailUrl"
+      :alt="photo.title"
+      class="image"
+      loading="lazy"
+    />
     <div class="body">
       <h3 class="title">{{ photo.title }}</h3>
       <p v-if="photo.description" class="desc">{{ photo.description }}</p>
@@ -24,7 +29,9 @@ defineProps<{ photo: Photo }>()
   border: 1px solid var(--color-border);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.2s, transform 0.2s;
+  transition:
+    box-shadow 0.2s,
+    transform 0.2s;
 }
 
 .card:hover {

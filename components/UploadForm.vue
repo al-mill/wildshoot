@@ -16,7 +16,13 @@
       </div>
     </div>
 
-    <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="onFileChange" />
+    <input
+      ref="fileInput"
+      type="file"
+      accept="image/*"
+      class="hidden"
+      @change="onFileChange"
+    />
 
     <label class="field">
       Location <span class="req">*</span>
@@ -31,13 +37,22 @@
 
     <label class="field">
       Description
-      <textarea v-model="description" class="input" rows="3" placeholder="Optional caption…" />
+      <textarea
+        v-model="description"
+        class="input"
+        rows="3"
+        placeholder="Optional caption…"
+      />
     </label>
 
     <p v-if="error" class="msg error">{{ error }}</p>
     <p v-if="success" class="msg success">Photo uploaded!</p>
 
-    <button type="submit" class="btn-submit" :disabled="!selectedFile || !location || isSubmitting">
+    <button
+      type="submit"
+      class="btn-submit"
+      :disabled="!selectedFile || !location || isSubmitting"
+    >
       {{ isSubmitting ? 'Uploading…' : 'Upload Photo' }}
     </button>
   </form>
@@ -89,7 +104,11 @@ async function handleSubmit() {
   error.value = null
   success.value = false
   try {
-    await photos.uploadPhoto(selectedFile.value, location.value, description.value)
+    await photos.uploadPhoto(
+      selectedFile.value,
+      location.value,
+      description.value
+    )
     success.value = true
     selectedFile.value = null
     previewUrl.value = null
@@ -122,7 +141,9 @@ async function handleSubmit() {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  transition: border-color 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
 }
 
 .drop-zone:hover,

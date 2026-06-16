@@ -3,7 +3,8 @@
     <div v-if="!auth.isLoggedIn" class="hero">
       <h1 class="hero-title">Share your world,<br />one shot at a time.</h1>
       <p class="hero-sub">
-        Upload photos with location data and explore shots from around the globe.
+        Upload photos with location data and explore shots from around the
+        globe.
       </p>
       <div class="hero-actions">
         <NuxtLink to="/register" class="btn-primary">Get started</NuxtLink>
