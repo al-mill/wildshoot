@@ -1,38 +1,22 @@
 <template>
   <div class="page">
     <div class="card">
-      <h1 class="title">Create an account</h1>
-      <p class="sub">Start sharing photos on Wild Shoot</p>
+      <h1 class="title">Check your email</h1>
+      <p class="sub">
+        We sent a confirmation code to
+        <strong>{{ email }}</strong>
+      </p>
 
       <form @submit.prevent="handleSubmit">
         <label class="field">
-          Name
+          Confirmation code
           <input
-            v-model="name"
+            v-model="code"
             type="text"
             class="input"
-            placeholder="Your name"
-            required
-          />
-        </label>
-        <label class="field">
-          Email
-          <input
-            v-model="email"
-            type="email"
-            class="input"
-            placeholder="you@example.com"
-            required
-          />
-        </label>
-        <label class="field">
-          Password
-          <input
-            v-model="password"
-            type="password"
-            class="input"
-            placeholder="At least 8 characters"
-            minlength="8"
+            placeholder="123456"
+            inputmode="numeric"
+            autocomplete="one-time-code"
             required
           />
         </label>
@@ -40,12 +24,12 @@
         <p v-if="auth.error" class="error">{{ auth.error }}</p>
 
         <button type="submit" class="btn-submit" :disabled="auth.isLoading">
-          {{ auth.isLoading ? 'Creating account…' : 'Sign up' }}
+          {{ auth.isLoading ? 'Confirming…' : 'Confirm account' }}
         </button>
       </form>
 
       <p class="footer-link">
-        Already have an account? <NuxtLink to="/login">Log in</NuxtLink>
+        Already confirmed? <NuxtLink to="/login">Log in</NuxtLink>
       </p>
     </div>
   </div>
@@ -56,14 +40,14 @@ definePageMeta({ layout: 'default' });
 
 const auth = useAuthStore();
 const router = useRouter();
+const route = useRoute();
 
-const name = ref('');
-const email = ref('');
-const password = ref('');
+const email = computed(() => String(route.query.email ?? ''));
+const code = ref('');
 
 async function handleSubmit() {
-  const ok = await auth.register(name.value, email.value, password.value);
-  if (ok) router.push(`/confirm?email=${encodeURIComponent(email.value)}`);
+  const ok = await auth.confirmSignUp(email.value, code.value);
+  if (ok) router.push('/login');
 }
 </script>
 

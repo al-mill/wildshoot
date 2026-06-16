@@ -19,8 +19,8 @@ export default defineNuxtConfig({
     // Public keys (exposed to client-side)
     public: {
       awsRegion: process.env.AWS_REGION || 'us-east-1',
-      cognitoUserPoolId: process.env.NUXT_PUBLIC_COGNITO_USER_POOL_ID,
-      cognitoClientId: process.env.NUXT_PUBLIC_COGNITO_CLIENT_ID,
+      cognitoUserPoolId: process.env.NUXT_PUBLIC_COGNITO_USER_POOL_ID ?? '',
+      cognitoClientId: process.env.NUXT_PUBLIC_COGNITO_CLIENT_ID ?? '',
       cognitoIdentityPoolId: process.env.NUXT_PUBLIC_COGNITO_IDENTITY_POOL_ID,
       s3Bucket: process.env.NUXT_PUBLIC_S3_BUCKET,
       cloudfrontUrl: process.env.NUXT_PUBLIC_CLOUDFRONT_URL,
@@ -39,7 +39,7 @@ export default defineNuxtConfig({
 
   // Build configuration
   build: {
-    transpile: ['aws-amplify'],
+    transpile: ['amazon-cognito-identity-js'],
   },
 
   // Server-side rendering configuration
@@ -52,7 +52,10 @@ export default defineNuxtConfig({
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'description', content: 'A DevOps-focused photo-sharing application built on AWS' },
+        {
+          name: 'description',
+          content: 'A DevOps-focused photo-sharing application built on AWS',
+        },
       ],
       link: [{ rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }],
     },
