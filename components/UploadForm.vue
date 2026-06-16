@@ -59,66 +59,66 @@
 </template>
 
 <script setup lang="ts">
-const emit = defineEmits<{ uploaded: [] }>()
+const emit = defineEmits<{ uploaded: [] }>();
 
-const photos = usePhotosStore()
+const photos = usePhotosStore();
 
-const fileInput = ref<HTMLInputElement | null>(null)
-const selectedFile = ref<File | null>(null)
-const previewUrl = ref<string | null>(null)
-const location = ref('')
-const description = ref('')
-const isDragging = ref(false)
-const isSubmitting = ref(false)
-const error = ref<string | null>(null)
-const success = ref(false)
+const fileInput = ref<HTMLInputElement | null>(null);
+const selectedFile = ref<File | null>(null);
+const previewUrl = ref<string | null>(null);
+const location = ref('');
+const description = ref('');
+const isDragging = ref(false);
+const isSubmitting = ref(false);
+const error = ref<string | null>(null);
+const success = ref(false);
 
 function onFileChange(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (file) setFile(file)
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (file) setFile(file);
 }
 
 function onDrop(e: DragEvent) {
-  isDragging.value = false
-  const file = e.dataTransfer?.files?.[0]
-  if (file?.type.startsWith('image/')) setFile(file)
+  isDragging.value = false;
+  const file = e.dataTransfer?.files?.[0];
+  if (file?.type.startsWith('image/')) setFile(file);
 }
 
 function setFile(file: File) {
   if (file.size > 10 * 1024 * 1024) {
-    error.value = 'File exceeds the 10 MB limit'
-    return
+    error.value = 'File exceeds the 10 MB limit';
+    return;
   }
-  selectedFile.value = file
-  error.value = null
-  const reader = new FileReader()
+  selectedFile.value = file;
+  error.value = null;
+  const reader = new FileReader();
   reader.onload = e => {
-    previewUrl.value = e.target?.result as string
-  }
-  reader.readAsDataURL(file)
+    previewUrl.value = e.target?.result as string;
+  };
+  reader.readAsDataURL(file);
 }
 
 async function handleSubmit() {
-  if (!selectedFile.value || !location.value) return
-  isSubmitting.value = true
-  error.value = null
-  success.value = false
+  if (!selectedFile.value || !location.value) return;
+  isSubmitting.value = true;
+  error.value = null;
+  success.value = false;
   try {
     await photos.uploadPhoto(
       selectedFile.value,
       location.value,
       description.value
-    )
-    success.value = true
-    selectedFile.value = null
-    previewUrl.value = null
-    location.value = ''
-    description.value = ''
-    emit('uploaded')
+    );
+    success.value = true;
+    selectedFile.value = null;
+    previewUrl.value = null;
+    location.value = '';
+    description.value = '';
+    emit('uploaded');
   } catch {
-    error.value = 'Upload failed — please try again'
+    error.value = 'Upload failed — please try again';
   } finally {
-    isSubmitting.value = false
+    isSubmitting.value = false;
   }
 }
 </script>

@@ -9,17 +9,17 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ middleware: 'admin', layout: 'admin' })
+definePageMeta({ middleware: 'admin', layout: 'admin' });
 
-const photos = usePhotosStore()
+const photos = usePhotosStore();
 
 onMounted(() => {
-  if (photos.photos.length === 0) photos.fetchPhotos()
-})
+  if (photos.photos.length === 0) photos.fetchPhotos();
+});
 
 async function handleDelete(id: string) {
   if (confirm('Delete this photo?')) {
-    await photos.deletePhoto(id)
+    await photos.deletePhoto(id);
   }
 }
 </script>

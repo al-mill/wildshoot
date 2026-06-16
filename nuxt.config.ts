@@ -76,6 +76,7 @@ export default defineNuxtConfig({
   vite: {
     define: {
       global: 'globalThis',
+      self: 'globalThis',
     },
     resolve: {
       alias: {
@@ -83,4 +84,4 @@ export default defineNuxtConfig({
       },
     },
   },
-})
+});

@@ -1,6 +1,6 @@
-import type { User, AdminStats } from '~/types'
+import type { User, AdminStats } from '~/types';
 
-const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
+const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 
 const MOCK_USERS: User[] = [
   {
@@ -35,7 +35,7 @@ const MOCK_USERS: User[] = [
     joinedAt: '2024-04-20T00:00:00Z',
     isAdmin: false,
   },
-]
+];
 
 const MOCK_STATS: AdminStats = {
   totalUsers: 4,
@@ -48,26 +48,26 @@ const MOCK_STATS: AdminStats = {
     { name: 'Joshua Tree, CA', count: 1 },
     { name: 'Stowe, VT', count: 1 },
   ],
-}
+};
 
 export const useAdminStore = defineStore('admin', () => {
-  const stats = ref<AdminStats | null>(null)
-  const users = ref<User[]>([])
-  const isLoading = ref(false)
+  const stats = ref<AdminStats | null>(null);
+  const users = ref<User[]>([]);
+  const isLoading = ref(false);
 
   async function fetchStats() {
-    isLoading.value = true
-    await wait(400) // TODO: GET /api/admin/stats
-    stats.value = { ...MOCK_STATS }
-    isLoading.value = false
+    isLoading.value = true;
+    await wait(400); // TODO: GET /api/admin/stats
+    stats.value = { ...MOCK_STATS };
+    isLoading.value = false;
   }
 
   async function fetchUsers() {
-    isLoading.value = true
-    await wait(400) // TODO: GET /api/admin/users
-    users.value = [...MOCK_USERS]
-    isLoading.value = false
+    isLoading.value = true;
+    await wait(400); // TODO: GET /api/admin/users
+    users.value = [...MOCK_USERS];
+    isLoading.value = false;
   }
 
-  return { stats, users, isLoading, fetchStats, fetchUsers }
-})
+  return { stats, users, isLoading, fetchStats, fetchUsers };
+});

@@ -52,18 +52,18 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'default' })
+definePageMeta({ layout: 'default' });
 
-const auth = useAuthStore()
-const router = useRouter()
+const auth = useAuthStore();
+const router = useRouter();
 
-const name = ref('')
-const email = ref('')
-const password = ref('')
+const name = ref('');
+const email = ref('');
+const password = ref('');
 
 async function handleSubmit() {
-  const ok = await auth.register(name.value, email.value, password.value)
-  if (ok) router.push(`/confirm?email=${encodeURIComponent(email.value)}`)
+  const ok = await auth.register(name.value, email.value, password.value);
+  if (ok) router.push(`/confirm?email=${encodeURIComponent(email.value)}`);
 }
 </script>
 

@@ -35,11 +35,11 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ middleware: 'admin', layout: 'admin' })
+definePageMeta({ middleware: 'admin', layout: 'admin' });
 
-const admin = useAdminStore()
+const admin = useAdminStore();
 
-onMounted(() => admin.fetchStats())
+onMounted(() => admin.fetchStats());
 </script>
 
 <style scoped>

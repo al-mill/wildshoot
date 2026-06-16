@@ -11,11 +11,11 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ middleware: 'admin', layout: 'admin' })
+definePageMeta({ middleware: 'admin', layout: 'admin' });
 
-const admin = useAdminStore()
+const admin = useAdminStore();
 
-onMounted(() => admin.fetchUsers())
+onMounted(() => admin.fetchUsers());
 </script>
 
 <style scoped>

@@ -18,8 +18,8 @@
 </template>
 
 <script setup lang="ts">
-import type { Photo } from '~/types'
-defineProps<{ photo: Photo }>()
+import type { Photo } from '~/types';
+defineProps<{ photo: Photo }>();
 </script>
 
 <style scoped>

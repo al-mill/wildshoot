@@ -22,10 +22,10 @@
 </template>
 
 <script setup lang="ts">
-const auth = useAuthStore()
-const photos = usePhotosStore()
+const auth = useAuthStore();
+const photos = usePhotosStore();
 
-onMounted(() => photos.fetchPhotos())
+onMounted(() => photos.fetchPhotos());
 </script>
 
 <style scoped>

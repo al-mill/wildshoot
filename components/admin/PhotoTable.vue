@@ -52,41 +52,41 @@
 </template>
 
 <script setup lang="ts">
-import type { Photo } from '~/types'
+import type { Photo } from '~/types';
 
-const props = defineProps<{ photos: Photo[] }>()
-const emit = defineEmits<{ delete: [id: string] }>()
+const props = defineProps<{ photos: Photo[] }>();
+const emit = defineEmits<{ delete: [id: string] }>();
 
-const PAGE_SIZE = 10
-const locationFilter = ref('')
-const page = ref(1)
+const PAGE_SIZE = 10;
+const locationFilter = ref('');
+const page = ref(1);
 
 const filtered = computed(() => {
-  const q = locationFilter.value.toLowerCase()
+  const q = locationFilter.value.toLowerCase();
   return q
     ? props.photos.filter(p => p.location.toLowerCase().includes(q))
-    : props.photos
-})
+    : props.photos;
+});
 
 const totalPages = computed(() =>
   Math.max(1, Math.ceil(filtered.value.length / PAGE_SIZE))
-)
+);
 
 const paginated = computed(() => {
-  const start = (page.value - 1) * PAGE_SIZE
-  return filtered.value.slice(start, start + PAGE_SIZE)
-})
+  const start = (page.value - 1) * PAGE_SIZE;
+  return filtered.value.slice(start, start + PAGE_SIZE);
+});
 
 watch(locationFilter, () => {
-  page.value = 1
-})
+  page.value = 1;
+});
 
 function fmt(iso: string) {
   return new Date(iso).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
-  })
+  });
 }
 </script>
 

@@ -1,6 +1,6 @@
-import type { Photo } from '~/types'
+import type { Photo } from '~/types';
 
-const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
+const wait = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 
 const MOCK_PHOTOS: Photo[] = [
   {
@@ -69,17 +69,17 @@ const MOCK_PHOTOS: Photo[] = [
     userName: 'Sam Rivera',
     uploadedAt: '2024-05-14T11:30:00Z',
   },
-]
+];
 
 export const usePhotosStore = defineStore('photos', () => {
-  const photos = ref<Photo[]>([])
-  const isLoading = ref(false)
+  const photos = ref<Photo[]>([]);
+  const isLoading = ref(false);
 
   async function fetchPhotos() {
-    isLoading.value = true
-    await wait(400) // TODO: GET /api/photos
-    photos.value = [...MOCK_PHOTOS]
-    isLoading.value = false
+    isLoading.value = true;
+    await wait(400); // TODO: GET /api/photos
+    photos.value = [...MOCK_PHOTOS];
+    isLoading.value = false;
   }
 
   async function uploadPhoto(
@@ -87,8 +87,8 @@ export const usePhotosStore = defineStore('photos', () => {
     location: string,
     description: string
   ): Promise<Photo> {
-    isLoading.value = true
-    await wait(800) // TODO: POST /api/photos (multipart)
+    isLoading.value = true;
+    await wait(800); // TODO: POST /api/photos (multipart)
     const photo: Photo = {
       id: String(Date.now()),
       url: URL.createObjectURL(file),
@@ -99,16 +99,16 @@ export const usePhotosStore = defineStore('photos', () => {
       userId: '1',
       userName: 'Alex Miller',
       uploadedAt: new Date().toISOString(),
-    }
-    photos.value.unshift(photo)
-    isLoading.value = false
-    return photo
+    };
+    photos.value.unshift(photo);
+    isLoading.value = false;
+    return photo;
   }
 
   async function deletePhoto(id: string) {
-    await wait(300) // TODO: DELETE /api/photos/:id
-    photos.value = photos.value.filter(p => p.id !== id)
+    await wait(300); // TODO: DELETE /api/photos/:id
+    photos.value = photos.value.filter(p => p.id !== id);
   }
 
-  return { photos, isLoading, fetchPhotos, uploadPhoto, deletePhoto }
-})
+  return { photos, isLoading, fetchPhotos, uploadPhoto, deletePhoto };
+});
