@@ -45,8 +45,6 @@
   "dependencies": {
     "@nuxt/image": "^1.7.0",
     "@pinia/nuxt": "^0.5.1",
-    "@types/aws-lambda": "^8.10.161",
-    "@types/pg": "^8.20.0",
     "aws-jwt-verify": "^5.1.1",
     "nuxt": "^3.11.2",
     "pg": "^8.21.0",
@@ -54,6 +52,8 @@
     "vue": "^3.4.21"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.161",
+    "@types/pg": "^8.20.0",
     "@nuxt/eslint-config": "^0.3.13",
     "@nuxt/test-utils": "^3.12.1",
     "@types/node": "^20.19.41",

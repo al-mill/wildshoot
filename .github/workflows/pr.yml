@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   checks:
     name: Lint / Typecheck / Test / Synth
@@ -48,9 +51,9 @@ jobs:
           BASE=${{ github.event.pull_request.base.sha }}
           HEAD=${{ github.event.pull_request.head.sha }}
 
-          CDK_CHANGED=$(git diff --name-only $BASE $HEAD | grep '^cdk/' | wc -l | tr -d ' ')
-          LAMBDA_CHANGED=$(git diff --name-only $BASE $HEAD | grep '^lambda/' | wc -l | tr -d ' ')
-          FRONTEND_CHANGED=$(git diff --name-only $BASE $HEAD | grep -E '^(pages|components|composables|stores|layouts)/' | wc -l | tr -d ' ')
+          CDK_CHANGED=$(git diff --name-only $BASE $HEAD | (grep '^cdk/' || true) | wc -l | tr -d ' ')
+          LAMBDA_CHANGED=$(git diff --name-only $BASE $HEAD | (grep '^lambda/' || true) | wc -l | tr -d ' ')
+          FRONTEND_CHANGED=$(git diff --name-only $BASE $HEAD | (grep -E '^(pages|components|composables|stores|layouts)/' || true) | wc -l | tr -d ' ')
 
           echo "cdk=$CDK_CHANGED" >> $GITHUB_OUTPUT
           echo "lambda=$LAMBDA_CHANGED" >> $GITHUB_OUTPUT

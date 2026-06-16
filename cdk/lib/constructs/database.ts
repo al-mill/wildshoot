@@ -39,7 +39,7 @@ export class DatabaseConstruct extends Construct {
       securityGroups: [props.securityGroup],
       credentials: rds.Credentials.fromSecret(this.credentials),
       databaseName: 'wildshoot',
-      storageEncrypted: false,
+      storageEncrypted: props.stage === 'production',
       multiAz: false,
       autoMinorVersionUpgrade: true,
       deleteAutomatedBackups: props.stage !== 'production',
