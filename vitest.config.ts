@@ -48,10 +48,10 @@ export default defineConfig({
       ],
     },
 
-    passWithNoTests: true,
-
     // Global test configuration
     globals: true,
+
+    passWithNoTests: true,
   },
 
   // Resolve configuration
