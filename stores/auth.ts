@@ -95,6 +95,38 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function forgotPassword(email: string): Promise<boolean> {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      await cognito.forgotPassword(email);
+      return true;
+    } catch (err) {
+      error.value = cognitoErrorMessage(err);
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function resetPassword(
+    email: string,
+    code: string,
+    newPassword: string
+  ): Promise<boolean> {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      await cognito.resetPassword(email, code, newPassword);
+      return true;
+    } catch (err) {
+      error.value = cognitoErrorMessage(err);
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   async function logout(): Promise<void> {
     try {
       if (accessCookie.value) {
@@ -118,6 +150,8 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     confirmSignUp,
+    forgotPassword,
+    resetPassword,
     logout,
   };
 });

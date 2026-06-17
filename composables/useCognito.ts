@@ -70,7 +70,31 @@ export function useCognito() {
     await request('GlobalSignOut', { AccessToken: accessToken });
   }
 
-  return { signUp, confirmSignUp, signIn, globalSignOut };
+  async function forgotPassword(email: string) {
+    await request('ForgotPassword', { ClientId: clientId, Username: email });
+  }
+
+  async function resetPassword(
+    email: string,
+    code: string,
+    newPassword: string
+  ) {
+    await request('ConfirmForgotPassword', {
+      ClientId: clientId,
+      Username: email,
+      ConfirmationCode: code,
+      Password: newPassword,
+    });
+  }
+
+  return {
+    signUp,
+    confirmSignUp,
+    signIn,
+    globalSignOut,
+    forgotPassword,
+    resetPassword,
+  };
 }
 
 const COGNITO_MESSAGES: Record<string, string> = {
