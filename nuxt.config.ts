@@ -19,8 +19,8 @@ export default defineNuxtConfig({
     // Public keys (exposed to client-side)
     public: {
       awsRegion: process.env.AWS_REGION || 'us-east-1',
-      cognitoUserPoolId: process.env.NUXT_PUBLIC_COGNITO_USER_POOL_ID,
-      cognitoClientId: process.env.NUXT_PUBLIC_COGNITO_CLIENT_ID,
+      cognitoUserPoolId: process.env.NUXT_PUBLIC_COGNITO_USER_POOL_ID ?? '',
+      cognitoClientId: process.env.NUXT_PUBLIC_COGNITO_CLIENT_ID ?? '',
       cognitoIdentityPoolId: process.env.NUXT_PUBLIC_COGNITO_IDENTITY_POOL_ID,
       s3Bucket: process.env.NUXT_PUBLIC_S3_BUCKET,
       cloudfrontUrl: process.env.NUXT_PUBLIC_CLOUDFRONT_URL,
@@ -39,7 +39,7 @@ export default defineNuxtConfig({
 
   // Build configuration
   build: {
-    transpile: ['aws-amplify'],
+    transpile: [],
   },
 
   // Server-side rendering configuration
@@ -76,11 +76,6 @@ export default defineNuxtConfig({
   vite: {
     define: {
       global: 'globalThis',
-    },
-    resolve: {
-      alias: {
-        './runtimeConfig': './runtimeConfig.browser',
-      },
     },
   },
 });

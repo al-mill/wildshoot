@@ -1,46 +1,35 @@
 <template>
   <div class="page">
     <div class="card">
-      <h1 class="title">Welcome back</h1>
-      <p class="sub">Log in to your Wild Shoot account</p>
+      <h1 class="title">Check your email</h1>
+      <p class="sub">
+        We sent a confirmation code to
+        <strong>{{ email }}</strong>
+      </p>
 
       <form @submit.prevent="handleSubmit">
         <label class="field">
-          Email
+          Confirmation code
           <input
-            v-model="email"
-            type="email"
+            v-model="code"
+            type="text"
             class="input"
-            placeholder="you@example.com"
+            placeholder="123456"
+            inputmode="numeric"
+            autocomplete="one-time-code"
             required
           />
         </label>
-        <label class="field">
-          Password
-          <input
-            v-model="password"
-            type="password"
-            class="input"
-            placeholder="••••••••"
-            required
-          />
-        </label>
-
-        <div class="forgot-row">
-          <NuxtLink to="/forgot-password" class="forgot-link"
-            >Forgot password?</NuxtLink
-          >
-        </div>
 
         <p v-if="auth.error" class="error">{{ auth.error }}</p>
 
         <button type="submit" class="btn-submit" :disabled="auth.isLoading">
-          {{ auth.isLoading ? 'Logging in…' : 'Log in' }}
+          {{ auth.isLoading ? 'Confirming…' : 'Confirm account' }}
         </button>
       </form>
 
       <p class="footer-link">
-        Don't have an account? <NuxtLink to="/register">Sign up</NuxtLink>
+        Already confirmed? <NuxtLink to="/login">Log in</NuxtLink>
       </p>
     </div>
   </div>
@@ -51,13 +40,14 @@ definePageMeta({ layout: 'default' });
 
 const auth = useAuthStore();
 const router = useRouter();
+const route = useRoute();
 
-const email = ref('');
-const password = ref('');
+const email = computed(() => String(route.query.email ?? ''));
+const code = ref('');
 
 async function handleSubmit() {
-  await auth.login(email.value, password.value);
-  if (!auth.error) router.push('/');
+  const ok = await auth.confirmSignUp(email.value, code.value);
+  if (ok) router.push('/login');
 }
 </script>
 
@@ -149,21 +139,6 @@ form {
 .btn-submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-.forgot-row {
-  text-align: right;
-  margin-top: -4px;
-}
-
-.forgot-link {
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-  text-decoration: none;
-}
-
-.forgot-link:hover {
-  color: var(--color-primary);
 }
 
 .footer-link {

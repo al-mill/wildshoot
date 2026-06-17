@@ -52,5 +52,15 @@ export class AuthConstruct extends Construct {
       },
       generateSecret: false,
     });
+
+    new cdk.CfnOutput(this, 'UserPoolId', {
+      value: this.userPool.userPoolId,
+      description: 'NUXT_PUBLIC_COGNITO_USER_POOL_ID',
+    });
+
+    new cdk.CfnOutput(this, 'UserPoolClientId', {
+      value: this.userPoolClient.userPoolClientId,
+      description: 'NUXT_PUBLIC_COGNITO_CLIENT_ID',
+    });
   }
 }

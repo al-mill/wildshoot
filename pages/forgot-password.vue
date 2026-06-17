@@ -1,8 +1,8 @@
 <template>
   <div class="page">
     <div class="card">
-      <h1 class="title">Welcome back</h1>
-      <p class="sub">Log in to your Wild Shoot account</p>
+      <h1 class="title">Reset your password</h1>
+      <p class="sub">We'll send a reset code to your email.</p>
 
       <form @submit.prevent="handleSubmit">
         <label class="field">
@@ -15,32 +15,16 @@
             required
           />
         </label>
-        <label class="field">
-          Password
-          <input
-            v-model="password"
-            type="password"
-            class="input"
-            placeholder="••••••••"
-            required
-          />
-        </label>
-
-        <div class="forgot-row">
-          <NuxtLink to="/forgot-password" class="forgot-link"
-            >Forgot password?</NuxtLink
-          >
-        </div>
 
         <p v-if="auth.error" class="error">{{ auth.error }}</p>
 
         <button type="submit" class="btn-submit" :disabled="auth.isLoading">
-          {{ auth.isLoading ? 'Logging in…' : 'Log in' }}
+          {{ auth.isLoading ? 'Sending…' : 'Send reset code' }}
         </button>
       </form>
 
       <p class="footer-link">
-        Don't have an account? <NuxtLink to="/register">Sign up</NuxtLink>
+        <NuxtLink to="/login">Back to log in</NuxtLink>
       </p>
     </div>
   </div>
@@ -53,11 +37,11 @@ const auth = useAuthStore();
 const router = useRouter();
 
 const email = ref('');
-const password = ref('');
 
 async function handleSubmit() {
-  await auth.login(email.value, password.value);
-  if (!auth.error) router.push('/');
+  const ok = await auth.forgotPassword(email.value);
+  if (ok)
+    router.push(`/reset-password?email=${encodeURIComponent(email.value)}`);
 }
 </script>
 
@@ -149,21 +133,6 @@ form {
 .btn-submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-.forgot-row {
-  text-align: right;
-  margin-top: -4px;
-}
-
-.forgot-link {
-  font-size: 0.8rem;
-  color: var(--color-text-muted);
-  text-decoration: none;
-}
-
-.forgot-link:hover {
-  color: var(--color-primary);
 }
 
 .footer-link {
