@@ -38,20 +38,22 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null;
     try {
       const session = await cognito.signIn(email, password);
-      const payload = session.getIdToken().decodePayload();
-      const groups: string[] = payload['cognito:groups'] ?? [];
+      const rawGroups = session.payload['cognito:groups'];
+      const groups: string[] = Array.isArray(rawGroups)
+        ? rawGroups.filter((g): g is string => typeof g === 'string')
+        : [];
 
       const authUser: AuthUser = {
-        id: String(payload['sub'] ?? ''),
-        name: String(payload['name'] ?? email),
+        id: String(session.payload['sub'] ?? ''),
+        name: String(session.payload['name'] ?? email),
         email,
         isAdmin: groups.includes('admins'),
       };
 
       user.value = authUser;
       userCookie.value = authUser;
-      accessCookie.value = session.getAccessToken().getJwtToken();
-      refreshCookie.value = session.getRefreshToken().getToken();
+      accessCookie.value = session.accessToken;
+      refreshCookie.value = session.refreshToken;
       return true;
     } catch (err) {
       error.value = cognitoErrorMessage(err);
@@ -95,8 +97,8 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function logout(): Promise<void> {
     try {
-      if (user.value) {
-        await cognito.globalSignOut(user.value.email);
+      if (accessCookie.value) {
+        await cognito.globalSignOut(accessCookie.value);
       }
     } finally {
       user.value = null;

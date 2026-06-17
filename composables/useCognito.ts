@@ -1,94 +1,76 @@
-import {
-  CognitoUserPool,
-  CognitoUser,
-  CognitoUserAttribute,
-  CognitoRefreshToken,
-  AuthenticationDetails,
-  type CognitoUserSession,
-  type ISignUpResult,
-} from 'amazon-cognito-identity-js';
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+  return JSON.parse(atob(base64));
+}
+
+export interface CognitoSession {
+  idToken: string;
+  accessToken: string;
+  refreshToken: string;
+  payload: Record<string, unknown>;
+}
 
 export function useCognito() {
   const config = useRuntimeConfig();
+  const endpoint = `https://cognito-idp.${config.public.awsRegion}.amazonaws.com/`;
+  const clientId = config.public.cognitoClientId;
 
-  function pool() {
-    return new CognitoUserPool({
-      UserPoolId: config.public.cognitoUserPoolId,
-      ClientId: config.public.cognitoClientId,
+  async function request(target: string, body: Record<string, unknown>) {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-amz-json-1.1',
+        'X-Amz-Target': `AWSCognitoIdentityProviderService.${target}`,
+      },
+      body: JSON.stringify(body),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw { code: data.__type, message: data.message };
+    }
+    return data;
+  }
+
+  async function signUp(name: string, email: string, password: string) {
+    await request('SignUp', {
+      ClientId: clientId,
+      Username: email,
+      Password: password,
+      UserAttributes: [{ Name: 'name', Value: name }],
     });
   }
 
-  function signIn(
+  async function confirmSignUp(email: string, code: string) {
+    await request('ConfirmSignUp', {
+      ClientId: clientId,
+      Username: email,
+      ConfirmationCode: code,
+    });
+  }
+
+  async function signIn(
     email: string,
     password: string
-  ): Promise<CognitoUserSession> {
-    return new Promise((resolve, reject) => {
-      const user = new CognitoUser({ Username: email, Pool: pool() });
-      user.authenticateUser(
-        new AuthenticationDetails({ Username: email, Password: password }),
-        {
-          onSuccess: resolve,
-          onFailure: reject,
-          newPasswordRequired: () =>
-            reject(new Error('Password change required — contact support')),
-        }
-      );
+  ): Promise<CognitoSession> {
+    const data = await request('InitiateAuth', {
+      AuthFlow: 'USER_PASSWORD_AUTH',
+      ClientId: clientId,
+      AuthParameters: { USERNAME: email, PASSWORD: password },
     });
+    const { IdToken, AccessToken, RefreshToken } = data.AuthenticationResult;
+    return {
+      idToken: IdToken,
+      accessToken: AccessToken,
+      refreshToken: RefreshToken,
+      payload: decodeJwtPayload(IdToken),
+    };
   }
 
-  function signUp(
-    name: string,
-    email: string,
-    password: string
-  ): Promise<ISignUpResult> {
-    return new Promise((resolve, reject) => {
-      pool().signUp(
-        email,
-        password,
-        [new CognitoUserAttribute({ Name: 'name', Value: name })],
-        [],
-        (err, result) => {
-          if (err || !result) return reject(err ?? new Error('Sign up failed'));
-          resolve(result);
-        }
-      );
-    });
+  async function globalSignOut(accessToken: string) {
+    await request('GlobalSignOut', { AccessToken: accessToken });
   }
 
-  function confirmSignUp(email: string, code: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const user = new CognitoUser({ Username: email, Pool: pool() });
-      user.confirmRegistration(code, true, err => {
-        if (err) return reject(err);
-        resolve();
-      });
-    });
-  }
-
-  function globalSignOut(email: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const user = new CognitoUser({ Username: email, Pool: pool() });
-      user.globalSignOut({ onSuccess: () => resolve(), onFailure: reject });
-    });
-  }
-
-  function refresh(
-    email: string,
-    refreshToken: string
-  ): Promise<CognitoUserSession> {
-    return new Promise((resolve, reject) => {
-      const user = new CognitoUser({ Username: email, Pool: pool() });
-      user.refreshSession(
-        new CognitoRefreshToken({ RefreshToken: refreshToken }),
-        (err, session) => {
-          if (err) return reject(err);
-          resolve(session);
-        }
-      );
-    });
-  }
-
-  return { signIn, signUp, confirmSignUp, globalSignOut, refresh };
+  return { signUp, confirmSignUp, signIn, globalSignOut };
 }
 
 const COGNITO_MESSAGES: Record<string, string> = {

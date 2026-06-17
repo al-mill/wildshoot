@@ -39,7 +39,7 @@ export default defineNuxtConfig({
 
   // Build configuration
   build: {
-    transpile: ['amazon-cognito-identity-js'],
+    transpile: [],
   },
 
   // Server-side rendering configuration
@@ -76,12 +76,6 @@ export default defineNuxtConfig({
   vite: {
     define: {
       global: 'globalThis',
-      self: 'globalThis',
-    },
-    resolve: {
-      alias: {
-        './runtimeConfig': './runtimeConfig.browser',
-      },
     },
   },
 });

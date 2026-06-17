@@ -62,8 +62,18 @@ const email = ref('');
 const password = ref('');
 
 async function handleSubmit() {
+  console.log('[register] submitting', {
+    email: email.value,
+    name: name.value,
+  });
   await auth.register(name.value, email.value, password.value);
-  if (!auth.error) router.push('/');
+  console.log('[register] result', {
+    error: auth.error,
+    isLoading: auth.isLoading,
+  });
+  if (!auth.error) {
+    router.push(`/confirm?email=${encodeURIComponent(email.value)}`);
+  }
 }
 </script>
 
