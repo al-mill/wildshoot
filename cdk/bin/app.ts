@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { WildshootStack } from '../lib/stacks/wildshoot-stack';
+import { CiStack } from '../lib/stacks/ci-stack';
 
 const app = new cdk.App();
 
@@ -12,4 +13,14 @@ new WildshootStack(app, `Wildshoot-${stage}`, {
   env: { account, region },
   stackName: `wildshoot-${stage}`,
   description: `Wildshoot ${stage} stack`,
+});
+
+// Deploy once — creates the GitHub OIDC provider and per-environment IAM roles.
+// Run: npx cdk deploy WildshootCi --require-approval never
+new CiStack(app, 'WildshootCi', {
+  env: { account, region },
+  stackName: 'wildshoot-ci',
+  description: 'GitHub Actions OIDC provider and deploy roles',
+  githubOrg: 'al-mill',
+  githubRepo: 'wildshoot',
 });
