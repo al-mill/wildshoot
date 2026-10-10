@@ -8,7 +8,7 @@ The API ADR established that we use AWS Lambda + API Gateway. This document cove
 
 ## Runtime & Toolchain
 
-**Node.js 20.x + TypeScript**
+**Node.js 24.x + TypeScript** (amended 2026-10-09: Lambda deprecated `nodejs20.x` on 2026-04-30; `nodejs24.x` is supported to 2028-04-30)
 
 - Consistent with the Nuxt frontend — same language, same types, shared `types/index.ts`
 - esbuild bundling via CDK's `NodejsFunction` construct: fast builds, tree shaking, single-file output per function
@@ -20,7 +20,7 @@ The API ADR established that we use AWS Lambda + API Gateway. This document cove
 new NodejsFunction(this, 'PhotosUpload', {
   entry: 'lambda/photos/upload.ts',
   handler: 'handler',
-  runtime: Runtime.NODEJS_20_X,
+  runtime: Runtime.NODEJS_24_X,
   bundling: {
     minify: true,
     sourceMap: true,
@@ -36,15 +36,14 @@ new NodejsFunction(this, 'PhotosUpload', {
 ```
 lambda/
 ├── _shared/
+│   ├── auth.ts        # Reads user id + groups from the authorizer context
 │   ├── db.ts          # RDS connection pool (singleton)
-│   ├── response.ts    # Standard API Gateway response helpers
-│   └── types.ts       # Lambda-specific types (event shapes, etc.)
+│   ├── env.ts         # Required env var lookup
+│   └── response.ts    # Standard API Gateway response helpers
 ├── authorizers/
 │   └── cognito.ts     # JWT validation — runs before every protected route
 ├── auth/
-│   ├── login.ts
-│   ├── refresh.ts
-│   └── logout.ts
+│   └── me.ts          # Current user (login/refresh/logout happen browser → Cognito)
 ├── photos/
 │   ├── upload.ts
 │   ├── list.ts
@@ -81,7 +80,7 @@ We need a load test that fires > 112 simultaneous requests at the API to verify 
 **Rough structure (`test/load/connection-saturation.ts`):**
 
 ```typescript
-const CONCURRENCY = 150; // safely above our 90-connection budget
+const CONCURRENCY = 150; // safely above our 60-connection budget
 const ENDPOINT = process.env.STAGING_API_URL + '/api/photos';
 
 const results = await Promise.allSettled(
@@ -106,7 +105,7 @@ assert(
 );
 assert(throttled > 0, 'Some requests must be throttled once limit is exceeded');
 assert(
-  succeeded <= 90,
+  succeeded <= 60,
   'Successes must not exceed reserved concurrency budget'
 );
 ```
@@ -134,11 +133,11 @@ Set a **reserved concurrency limit** on each Lambda function group so the total 
 ```
 photos/* functions:  reserved concurrency 40
 admin/* functions:   reserved concurrency 20
-auth/* functions:    reserved concurrency 20
-authorizer:          reserved concurrency 10
 ─────────────────────────────────────────────
-Total max connections:                     90  (under the ~112 limit)
+Total max connections:                     60  (under the ~112 limit)
 ```
+
+Amended 2026-10-09: the authorizer and `auth/me` are out of the budget. Neither holds a DB connection, so they run outside the VPC with no reserved concurrency; the old `auth/*` login/refresh/logout functions no longer exist.
 
 Requests beyond the concurrency cap are throttled by API Gateway (429). The upside: zero cost, zero new infrastructure, the limit is explicit and visible in the CDK stack. The downside: throughput is capped. Fine for MVP scale.
 
@@ -221,6 +220,8 @@ Functions that need to call external services (Cognito JWKS endpoint for JWT val
 - Or route through a NAT Gateway (~$32/month — too expensive for free tier)
 
 **Decision:** Use VPC endpoints for S3 (free) and Cognito. The Lambda Authorizer validates JWTs offline using the cached Cognito public keys rather than calling the JWKS endpoint on every request.
+
+**Amended 2026-10-09:** the authorizer runs outside the VPC, so it fetches the JWKS over the internet directly. The Cognito interface endpoint is only needed if an in-VPC handler calls Cognito APIs (e.g. admin user deletion).
 
 ```
 VPC

@@ -40,7 +40,7 @@ This eliminates the need to validate tokens in every API function. The authorize
 Cognito groups map directly to our API permissions. Admin users get an 'admin' group claim in their JWT. Our authorizer extracts this and makes it available to API functions, so admin-only endpoints just check `event.requestContext.authorizer.groups`.
 
 **Session Management:**
-Rather than building custom session handling, we leverage Cognito's token refresh system. When access tokens expire, the frontend calls our refresh endpoint, which uses Cognito's refresh token flow. Clean, secure, and we don't store sensitive session data anywhere.
+Rather than building custom session handling, we leverage Cognito's token refresh system. When access tokens are about to expire (or the API returns a 401), the frontend refreshes them directly with Cognito (`REFRESH_TOKEN_AUTH`) — there is no refresh endpoint of our own. We don't store sensitive session data on the server.
 
 ### S3 Image Upload Integration
 
@@ -79,7 +79,7 @@ Frontend (Nuxt/Vue)
         ↓
 API Gateway (/api/*)
         ├── Lambda Authorizer (validates Cognito JWT)
-        ├── /auth/* → Auth Lambda Functions
+        ├── /me → Current user (from authorizer context)
         ├── /photos/* → Photo Lambda Functions
         └── /admin/* → Admin Lambda Functions
         ↓
@@ -93,11 +93,11 @@ Backend Services
 
 ### API Endpoint Structure
 
+Sign-up, sign-in, refresh and sign-out go from the browser straight to Cognito, so there are no `/api/auth/*` endpoints (amended 2026-10-09; see auth ADR).
+
 ```
-/api/auth
-  POST /login      → Exchange email/password for JWT tokens
-  POST /refresh    → Get new access token using refresh token
-  POST /logout     → Invalidate refresh token
+/api/me
+  GET  /           → Current user (sub, groups, isAdmin) from the authorizer
 
 /api/photos
   GET  /           → List user's photos (paginated)
@@ -119,11 +119,9 @@ We're organizing by feature, not by HTTP method:
 ```
 lambda/
 ├── authorizers/
-│   └── cognito-auth.ts    → Token validation logic
+│   └── cognito.ts         → Token validation logic
 ├── auth/
-│   ├── login.ts           → Handle Cognito authentication
-│   ├── refresh.ts         → Token refresh logic
-│   └── logout.ts          → Session cleanup
+│   └── me.ts              → Current user from authorizer context
 ├── photos/
 │   ├── upload.ts          → Process photo uploads
 │   ├── list.ts            → Fetch user photos
@@ -196,3 +194,7 @@ Lambda functions share a connection pool through Lambda Layers. Each function ca
 - Zero-downtime deployments
 - Monthly costs under $50 during first year
 - Development team can deploy new endpoints within one day
+
+## Open items
+
+- [ ] **CORS is localhost-only.** The API allows only `http://localhost:3000` (`FRONTEND_ORIGIN` in `cdk/lib/stacks/wildshoot-stack.ts`, used for preflight, gateway error responses and handler responses). When the frontend is hosted, set the real origin per stage and decide whether staging should still accept localhost.

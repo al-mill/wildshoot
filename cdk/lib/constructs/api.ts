@@ -1,0 +1,91 @@
+import * as path from 'path';
+import * as cdk from 'aws-cdk-lib';
+import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
+import { Construct } from 'constructs';
+
+interface ApiConstructProps {
+  stage: string;
+  userPool: cognito.UserPool;
+  userPoolClient: cognito.UserPoolClient;
+  allowedOrigin: string;
+}
+
+const LAMBDA_DIR = path.join(__dirname, '../../../lambda');
+
+export class ApiConstruct extends Construct {
+  public readonly api: apigateway.RestApi;
+
+  constructor(scope: Construct, id: string, props: ApiConstructProps) {
+    super(scope, id);
+
+    const fn = (
+      fnId: string,
+      entry: string,
+      environment: Record<string, string>
+    ) =>
+      new nodejs.NodejsFunction(this, fnId, {
+        entry: path.join(LAMBDA_DIR, entry),
+        handler: 'handler',
+        runtime: lambda.Runtime.NODEJS_24_X,
+        environment,
+        bundling: {
+          minify: true,
+          sourceMap: true,
+          externalModules: ['@aws-sdk/*'],
+        },
+      });
+
+    const authorizerFn = fn('CognitoAuthorizer', 'authorizers/cognito.ts', {
+      USER_POOL_ID: props.userPool.userPoolId,
+      CLIENT_ID: props.userPoolClient.userPoolClientId,
+    });
+    const meFn = fn('Me', 'auth/me.ts', {
+      ALLOWED_ORIGIN: props.allowedOrigin,
+    });
+
+    this.api = new apigateway.RestApi(this, 'RestApi', {
+      restApiName: `wildshoot-${props.stage}`,
+      deployOptions: { stageName: props.stage },
+      defaultCorsPreflightOptions: {
+        allowOrigins: [props.allowedOrigin],
+        allowHeaders: ['Authorization', 'Content-Type'],
+        allowMethods: apigateway.Cors.ALL_METHODS,
+      },
+    });
+
+    // Without CORS headers on gateway errors the browser reports a CORS failure
+    // instead of the 401 that triggers a token refresh.
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': `'${props.allowedOrigin}'`,
+      'Access-Control-Allow-Headers': "'Authorization,Content-Type'",
+    };
+    this.api.addGatewayResponse('Default4xx', {
+      type: apigateway.ResponseType.DEFAULT_4XX,
+      responseHeaders: corsHeaders,
+    });
+    this.api.addGatewayResponse('Default5xx', {
+      type: apigateway.ResponseType.DEFAULT_5XX,
+      responseHeaders: corsHeaders,
+    });
+
+    const authorizer = new apigateway.TokenAuthorizer(this, 'Authorizer', {
+      handler: authorizerFn,
+      resultsCacheTtl: cdk.Duration.minutes(5),
+    });
+
+    this.api.root
+      .addResource('api')
+      .addResource('me')
+      .addMethod('GET', new apigateway.LambdaIntegration(meFn), {
+        authorizer,
+      });
+
+    new cdk.CfnOutput(this, 'ApiUrl', {
+      value: this.api.url,
+      description: 'NUXT_PUBLIC_API_URL',
+    });
+  }
+}

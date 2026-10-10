@@ -1,7 +1,4 @@
-function decodeJwtPayload(token: string): Record<string, unknown> {
-  const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-  return JSON.parse(atob(base64));
-}
+import { decodeJwtPayload } from '~/utils/session';
 
 export interface CognitoSession {
   idToken: string;
@@ -66,6 +63,17 @@ export function useCognito() {
     };
   }
 
+  // The pool doesn't enable refresh-token rotation, so only new access/id tokens come back.
+  async function refreshSession(refreshToken: string) {
+    const data = await request('InitiateAuth', {
+      AuthFlow: 'REFRESH_TOKEN_AUTH',
+      ClientId: clientId,
+      AuthParameters: { REFRESH_TOKEN: refreshToken },
+    });
+    const { IdToken, AccessToken } = data.AuthenticationResult;
+    return { idToken: IdToken, accessToken: AccessToken };
+  }
+
   async function globalSignOut(accessToken: string) {
     await request('GlobalSignOut', { AccessToken: accessToken });
   }
@@ -91,6 +99,7 @@ export function useCognito() {
     signUp,
     confirmSignUp,
     signIn,
+    refreshSession,
     globalSignOut,
     forgotPassword,
     resetPassword,
