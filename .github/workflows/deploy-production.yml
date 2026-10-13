@@ -23,6 +23,13 @@ jobs:
     environment: production
 
     steps:
+      # Backs up the environment's main-only rule, which lives in repo settings.
+      - name: Check the run is on main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Production deploys run from main only, not $GITHUB_REF"
+          exit 1
+
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.sha || github.ref }}

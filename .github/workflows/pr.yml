@@ -108,6 +108,11 @@ jobs:
               });
             }
 
+      # After the comment, so a failed diff is both posted and a red check.
+      - name: Fail if cdk diff failed
+        if: steps.cdk_diff.outputs.status != '0'
+        run: exit 1
+
   changes:
     name: Summarise changed services
     runs-on: ubuntu-latest

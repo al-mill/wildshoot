@@ -22,6 +22,13 @@ jobs:
     environment: staging
 
     steps:
+      # Backs up the environment's main-only rule, which lives in repo settings.
+      - name: Check the run is on main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Staging deploys run from main only, not $GITHUB_REF"
+          exit 1
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
