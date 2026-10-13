@@ -55,11 +55,15 @@ jobs:
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           CDK_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'us-west-2' }}
+        # Staging is what merging changes; production shows settings only it has.
         # Keep cdk's exit code (not tee's) so a failed synth shows in the comment.
         run: |
           set -o pipefail
           status=0
-          npx cdk diff --context stage=staging 2>&1 | tee cdk-diff.txt || status=$?
+          {
+            npx cdk diff --context stage=staging 2>&1 &&
+              npx cdk diff Wildshoot-production --context stage=production 2>&1
+          } | tee cdk-diff.txt || status=$?
           echo "status=$status" >> "$GITHUB_OUTPUT"
 
       - name: Post diff to PR

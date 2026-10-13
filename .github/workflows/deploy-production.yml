@@ -26,6 +26,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.sha || github.ref }}
+          fetch-depth: 0
+
+      # The environment only checks the branch the run started from, not the sha input.
+      - name: Check the commit is on main
+        run: git merge-base --is-ancestor HEAD origin/main
 
       - uses: actions/setup-node@v4
         with:
@@ -47,7 +52,11 @@ jobs:
         run: npx cdk deploy Wildshoot-production --context stage=production --require-approval never
 
       - name: Summary
+        # Via env, not inline: sha is free text and would run as shell.
+        env:
+          COMMIT: ${{ inputs.sha || github.sha }}
+          ACTOR: ${{ github.actor }}
         run: |
           echo "### Deployed to production :white_check_mark:" >> $GITHUB_STEP_SUMMARY
-          echo "Commit: \`${{ inputs.sha || github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "Triggered by: @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "Commit: \`$COMMIT\`" >> $GITHUB_STEP_SUMMARY
+          echo "Triggered by: @$ACTOR" >> $GITHUB_STEP_SUMMARY
