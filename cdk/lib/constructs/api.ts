@@ -35,6 +35,9 @@ export class ApiConstruct extends Construct {
           minify: true,
           sourceMap: true,
           externalModules: ['@aws-sdk/*'],
+          // The root tsconfig extends Nuxt's generated one, which CI doesn't have,
+          // so CI and local bundles differed.
+          tsconfig: path.join(LAMBDA_DIR, 'tsconfig.bundle.json'),
         },
       });
 
