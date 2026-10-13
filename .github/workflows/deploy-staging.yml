@@ -1,7 +1,7 @@
 name: Deploy → Staging
 
-# Every merge to main deploys staging. Run it by hand on a branch to try that
-# branch on staging; the next merge to main puts main back.
+# Every merge to main deploys staging; run it by hand to redeploy main. The
+# staging environment only allows main, because this role can also deploy production.
 on:
   push:
     branches: [main]

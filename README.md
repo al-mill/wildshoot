@@ -117,7 +117,7 @@ Each photos/admin store action has a `// TODO:` comment showing the API endpoint
 
 Staging and production are separate CDK stacks:
 
-- Staging → the **Deploy → Staging** GitHub Actions workflow, on every merge to `main`. Run it by hand on a branch to try that branch on staging; the next merge puts `main` back. `npm run staging` still deploys from your machine (it runs `aws sso login` first if the session has expired).
+- Staging → the **Deploy → Staging** GitHub Actions workflow, on every merge to `main` (or run it by hand to redeploy `main`). To try a branch on staging, run `npm run staging` on it from your machine (it runs `aws sso login` first if the session has expired); the next merge puts `main` back.
 - Production → the manual **Deploy → Production** workflow, from `main` only
 
 Every PR gets an **Infrastructure diff** comment against staging. To preview it locally:
