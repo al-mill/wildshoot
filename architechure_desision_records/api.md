@@ -51,7 +51,7 @@ When users upload photos, our Lambda function receives the image data, validates
 
 - Validate image format and size before storage
 - Generate consistent file naming (userId/photoId/filename.jpg)
-- Store metadata in PostgreSQL while file goes to S3
+- Store metadata in DynamoDB while file goes to S3
 - Trigger async processing for thumbnails and optimization
 
 **Presigned URL Alternative:**
@@ -84,7 +84,7 @@ API Gateway (/api/*)
         └── /admin/* → Admin Lambda Functions
         ↓
 Backend Services
-        ├── PostgreSQL (metadata, user data)
+        ├── DynamoDB (metadata, user data, admin counters)
         ├── S3 (original photos, thumbnails)
         └── Cognito (authentication, user management)
 ```
@@ -141,12 +141,13 @@ Each Lambda function handles one specific operation. This keeps functions small,
 
 ### Database and Storage Strategy
 
-**PostgreSQL for Structured Data:**
+**DynamoDB for Structured Data** (amended 2026-10-13, was PostgreSQL; see the database ADR):
 
-- User profiles and settings
-- Photo metadata (title, description, upload date)
-- Comments and likes
-- Admin analytics and logs
+- User profiles, with a per-user photo count
+- Photo metadata (title, description, location, status, upload date)
+- Admin counters (totals and per-location counts), kept up to date in the same transaction as each write
+
+Comments, likes and logs are not in the MVP schema. Each would need its own items and access patterns in the database ADR.
 
 **S3 for Photo Storage:**
 
@@ -155,7 +156,7 @@ Each Lambda function handles one specific operation. This keeps functions small,
 - Optimized versions: `photos/web/{userId}/{photoId}/`
 
 **Connection Management:**
-Lambda functions share a connection pool through Lambda Layers. Each function can handle 20 concurrent database connections, and we provision based on expected traffic.
+None needed (amended 2026-10-13). DynamoDB is one HTTPS call per request, signed with the function's IAM role, so there is no pool, connection limit or VPC. See the serverless ADR.
 
 ## Benefits
 
@@ -175,7 +176,7 @@ Lambda functions share a connection pool through Lambda Layers. Each function ca
 
 **Cold Starts:** First request to an idle Lambda takes 200-500ms. Mitigated by keeping functions warm during business hours.
 
-**Connection Limits:** 20 database connections per Lambda instance. Could become bottleneck with heavy database usage.
+**Throughput Cap:** the free-tier DynamoDB capacity (12 WCU / 12 RCU per stage) allows about 5 writes/s per stage sustained. Requests over it are throttled to 429.
 
 **Vendor Lock-in:** Deeply integrated with AWS services. Migration to other cloud providers would require significant rewriting.
 
@@ -196,7 +197,7 @@ Lambda functions share a connection pool through Lambda Layers. Each function ca
 - API response times under 500ms (95th percentile)
 - Photo upload success rate above 99.5%
 - Zero-downtime deployments
-- Monthly costs under $50 during first year
+- Stays within the AWS free tier, a hard requirement (amended 2026-10-13, was "under $50/month during first year")
 - Development team can deploy new endpoints within one day
 
 ## Open items

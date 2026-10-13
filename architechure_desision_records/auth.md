@@ -47,7 +47,7 @@ Our Lambda authorizer does:
 
 Our handlers do (amended 2026-10-09, see below):
 
-- Photo ownership checks (`WHERE user_id = $1`)
+- Photo ownership checks (the photo's DynamoDB key starts with the owner's id, so another user's photo isn't found)
 - Subscription limits and business rules
 
 ## Other options we looked at
