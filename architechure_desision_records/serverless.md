@@ -43,7 +43,7 @@ lambda/
 ├── authorizers/
 │   └── cognito.ts     # JWT validation — runs before every protected route
 ├── auth/
-│   └── me.ts          # Current user (login/refresh/logout happen browser → Cognito)
+│   └── get.ts         # GET /api/auth — current user (login/refresh/logout happen browser → Cognito)
 ├── photos/
 │   ├── upload.ts
 │   ├── list.ts
@@ -137,7 +137,7 @@ admin/* functions:   reserved concurrency 20
 Total max connections:                     60  (under the ~112 limit)
 ```
 
-Amended 2026-10-09: the authorizer and `auth/me` are out of the budget. Neither holds a DB connection, so they run outside the VPC with no reserved concurrency; the old `auth/*` login/refresh/logout functions no longer exist.
+Amended 2026-10-09: the authorizer and `auth/get` are out of the budget. Neither holds a DB connection, so they run outside the VPC with no reserved concurrency; the old `auth/*` login/refresh/logout functions no longer exist.
 
 Requests beyond the concurrency cap are throttled by API Gateway (429). The upside: zero cost, zero new infrastructure, the limit is explicit and visible in the CDK stack. The downside: throughput is capped. Fine for MVP scale.
 

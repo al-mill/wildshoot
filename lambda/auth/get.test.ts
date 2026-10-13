@@ -1,12 +1,12 @@
 // @vitest-environment node
 import type { APIGatewayProxyEvent } from 'aws-lambda';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { handler } from './me';
+import { handler } from './get';
 
 const event = (authorizer: Record<string, unknown> | null) =>
   ({ requestContext: { authorizer } }) as unknown as APIGatewayProxyEvent;
 
-describe('GET /api/me', () => {
+describe('GET /api/auth', () => {
   beforeEach(() => {
     vi.stubEnv('ALLOWED_ORIGIN', 'http://localhost:3000');
   });

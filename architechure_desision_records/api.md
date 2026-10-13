@@ -79,7 +79,7 @@ Frontend (Nuxt/Vue)
         ↓
 API Gateway (/api/*)
         ├── Lambda Authorizer (validates Cognito JWT)
-        ├── /me → Current user (from authorizer context)
+        ├── /auth → Current user (from authorizer context)
         ├── /photos/* → Photo Lambda Functions
         └── /admin/* → Admin Lambda Functions
         ↓
@@ -93,10 +93,10 @@ Backend Services
 
 ### API Endpoint Structure
 
-Sign-up, sign-in, refresh and sign-out go from the browser straight to Cognito, so there are no `/api/auth/*` endpoints (amended 2026-10-09; see auth ADR).
+Sign-up, sign-in, refresh and sign-out go from the browser straight to Cognito, so `/api/auth` has no login/refresh/logout endpoints — only `GET` for the current user (amended 2026-10-09; see auth ADR).
 
 ```
-/api/me
+/api/auth
   GET  /           → Current user (sub, groups, isAdmin) from the authorizer
 
 /api/photos
@@ -121,7 +121,7 @@ lambda/
 ├── authorizers/
 │   └── cognito.ts         → Token validation logic
 ├── auth/
-│   └── me.ts              → Current user from authorizer context
+│   └── get.ts             → Current user from authorizer context
 ├── photos/
 │   ├── upload.ts          → Process photo uploads
 │   ├── list.ts            → Fetch user photos

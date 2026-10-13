@@ -42,7 +42,7 @@ export class ApiConstruct extends Construct {
       USER_POOL_ID: props.userPool.userPoolId,
       CLIENT_ID: props.userPoolClient.userPoolClientId,
     });
-    const meFn = fn('Me', 'auth/me.ts', {
+    const getAuthFn = fn('GetAuth', 'auth/get.ts', {
       ALLOWED_ORIGIN: props.allowedOrigin,
     });
 
@@ -78,8 +78,8 @@ export class ApiConstruct extends Construct {
 
     this.api.root
       .addResource('api')
-      .addResource('me')
-      .addMethod('GET', new apigateway.LambdaIntegration(meFn), {
+      .addResource('auth')
+      .addMethod('GET', new apigateway.LambdaIntegration(getAuthFn), {
         authorizer,
       });
 

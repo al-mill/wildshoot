@@ -14,7 +14,7 @@ vi.mock('aws-jwt-verify', () => ({
 }));
 
 const METHOD_ARN =
-  'arn:aws:execute-api:us-west-2:123456789012:abc123/staging/GET/api/me';
+  'arn:aws:execute-api:us-west-2:123456789012:abc123/staging/GET/api/auth';
 
 const event = (authorizationToken: string): APIGatewayTokenAuthorizerEvent => ({
   type: 'TOKEN',

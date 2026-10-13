@@ -35,7 +35,10 @@ describe('ApiConstruct', () => {
     });
   });
 
-  it('protects GET /api/me with the authorizer', () => {
+  it('protects GET /api/auth with the authorizer', () => {
+    template.hasResourceProperties('AWS::ApiGateway::Resource', {
+      PathPart: 'auth',
+    });
     template.hasResourceProperties('AWS::ApiGateway::Method', {
       HttpMethod: 'GET',
       AuthorizationType: 'CUSTOM',
@@ -73,9 +76,9 @@ describe('ApiConstruct', () => {
     expect(authorizer.ReservedConcurrentExecutions).toBeUndefined();
   });
 
-  it('passes the allowed origin to the /api/me handler', () => {
-    const me = findFunction('ALLOWED_ORIGIN');
-    expect(me.Environment.Variables.ALLOWED_ORIGIN).toBe(
+  it('passes the allowed origin to the /api/auth handler', () => {
+    const getAuth = findFunction('ALLOWED_ORIGIN');
+    expect(getAuth.Environment.Variables.ALLOWED_ORIGIN).toBe(
       'http://localhost:3000'
     );
   });
