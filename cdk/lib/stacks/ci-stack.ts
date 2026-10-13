@@ -48,7 +48,7 @@ export class CiStack extends cdk.Stack {
       description: 'Copy to the PR_ROLE_ARN repo secret in GitHub',
     });
 
-    // Only the "production" GitHub environment can assume this role
+    // Only the "staging" and "production" GitHub environments can assume this role
     const deployRole = new iam.Role(this, 'DeployRole', {
       roleName: 'wildshoot-github-deploy',
       assumedBy: new iam.WebIdentityPrincipal(
@@ -56,7 +56,10 @@ export class CiStack extends cdk.Stack {
         {
           StringEquals: {
             'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com',
-            'token.actions.githubusercontent.com:sub': `repo:${githubOrg}/${githubRepo}:environment:production`,
+            'token.actions.githubusercontent.com:sub': [
+              `repo:${githubOrg}/${githubRepo}:environment:staging`,
+              `repo:${githubOrg}/${githubRepo}:environment:production`,
+            ],
           },
         }
       ),

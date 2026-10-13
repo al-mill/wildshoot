@@ -117,8 +117,14 @@ Each photos/admin store action has a `// TODO:` comment showing the API endpoint
 
 Staging and production are separate CDK stacks:
 
-- Staging → `npm run staging` locally (runs `aws sso login` first if the session has expired)
-- Production → the manual **Deploy → Production** GitHub Actions workflow
+- Staging → the **Deploy → Staging** GitHub Actions workflow, on every merge to `main`. Run it by hand on a branch to try that branch on staging; the next merge puts `main` back. `npm run staging` still deploys from your machine (it runs `aws sso login` first if the session has expired).
+- Production → the manual **Deploy → Production** workflow, from `main` only
+
+Every PR gets an **Infrastructure diff** comment against staging. To preview it locally:
+
+```bash
+npx dotenv -- cdk diff --context stage=staging 2>&1 | node scripts/cdk-diff-comment.mjs
+```
 
 ## License
 
