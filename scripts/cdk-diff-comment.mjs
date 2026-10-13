@@ -1,5 +1,9 @@
 // Turns raw `cdk diff` output into the PR comment: one line per stack, with the
 // diff of each changed stack folded into a <details> block.
+// Preview locally: `npx dotenv -- cdk diff --context stage=staging 2>&1 | node scripts/cdk-diff-comment.mjs`
+import { readFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
+
 export const HEADER = '## Infrastructure diff';
 
 // Bundling, asset publishing and change-set chatter that cdk prints around each stack.
@@ -16,7 +20,7 @@ const NOISE = [
 const MAX_DIFF_LENGTH = 60000;
 
 const FOOTER =
-  '> Deploy is manual — nothing changes until you trigger the production workflow.';
+  '> Merging deploys staging. Production only changes when you run **Deploy → Production**.';
 
 function splitStacks(lines) {
   const stacks = [];
@@ -69,7 +73,7 @@ export function formatDiff(output, exitCode) {
     return [
       HEADER,
       details(
-        `❌ <strong>cdk diff failed</strong> (exit ${exitCode})`,
+        `❌ <strong>cdk diff failed</strong>${exitCode !== 0 ? ` (exit ${exitCode})` : ''}`,
         tail,
         MAX_DIFF_LENGTH
       ),
@@ -93,4 +97,8 @@ export function formatDiff(output, exitCode) {
   });
 
   return [HEADER, ...sections, FOOTER].join('\n\n');
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+  console.log(formatDiff(readFileSync(0, 'utf8'), 0));
 }

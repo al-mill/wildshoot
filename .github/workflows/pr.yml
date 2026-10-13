@@ -59,7 +59,7 @@ jobs:
         run: |
           set -o pipefail
           status=0
-          npx cdk diff --context stage=production 2>&1 | tee cdk-diff.txt || status=$?
+          npx cdk diff --context stage=staging 2>&1 | tee cdk-diff.txt || status=$?
           echo "status=$status" >> "$GITHUB_OUTPUT"
 
       - name: Post diff to PR
