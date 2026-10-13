@@ -1,6 +1,7 @@
 export function decodeJwtPayload(token: string): Record<string, unknown> {
   const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-  return JSON.parse(atob(base64));
+  const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
 }
 
 // Unreadable tokens count as expiring so callers refresh rather than send them.

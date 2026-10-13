@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { decodeJwtPayload, isExpiring, singleFlight } from './session';
 
 const base64Url = (value: string) =>
-  btoa(value).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  btoa(String.fromCharCode(...new TextEncoder().encode(value)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
 
 const jwt = (payload: Record<string, unknown>) =>
   `${base64Url('{"alg":"RS256"}')}.${base64Url(JSON.stringify(payload))}.sig`;
@@ -13,6 +16,12 @@ const nowSeconds = NOW_MS / 1000;
 describe('decodeJwtPayload', () => {
   it('decodes a base64url payload', () => {
     expect(decodeJwtPayload(jwt({ sub: 'user-1' }))).toEqual({ sub: 'user-1' });
+  });
+
+  it('keeps non-ASCII claims intact', () => {
+    expect(decodeJwtPayload(jwt({ name: 'José 東京' }))).toEqual({
+      name: 'José 東京',
+    });
   });
 });
 
