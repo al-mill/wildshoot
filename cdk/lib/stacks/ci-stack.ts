@@ -45,7 +45,7 @@ export class CiStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, 'PrRoleArn', {
       value: prRole.roleArn,
-      description: 'Copy to PR_ROLE_ARN repo variable in GitHub',
+      description: 'Copy to the PR_ROLE_ARN repo secret in GitHub',
     });
 
     // Only the "production" GitHub environment can assume this role
@@ -67,8 +67,7 @@ export class CiStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, 'DeployRoleArn', {
       value: deployRole.roleArn,
-      description:
-        'Copy to DEPLOY_ROLE_ARN variable in the GitHub production environment',
+      description: 'Copy to the DEPLOY_ROLE_ARN repo secret in GitHub',
     });
   }
 }

@@ -18,7 +18,7 @@
     "cdk:deploy": "dotenv -- cdk deploy",
     "cdk:destroy": "dotenv -- cdk destroy",
     "staging": "dotenv -- node scripts/staging.mjs",
-    "deploy:production": "dotenv -- cdk deploy --context stage=production",
+    "deploy:production": "dotenv -- cdk deploy Wildshoot-production --context stage=production",
     "bootstrap": "dotenv -- cdk bootstrap",
     "prepare": "husky install"
   },
