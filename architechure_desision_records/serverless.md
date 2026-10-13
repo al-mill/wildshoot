@@ -36,14 +36,18 @@ new NodejsFunction(this, 'PhotosUpload', {
 ```
 lambda/
 ├── _shared/
-│   ├── auth.ts        # Reads user id + groups from the authorizer context
+│   ├── auth.ts        # Bearer token parsing
+│   ├── cognito.ts     # Cognito client + error mapping
 │   ├── db.ts          # RDS connection pool (singleton)
 │   ├── env.ts         # Required env var lookup
+│   ├── request.ts     # JSON body parsing
 │   └── response.ts    # Standard API Gateway response helpers
 ├── authorizers/
 │   └── cognito.ts     # JWT validation — runs before every protected route
 ├── auth/
-│   └── get.ts         # GET /api/auth — current user (login/refresh/logout happen browser → Cognito)
+│   ├── login.ts
+│   ├── refresh.ts
+│   └── logout.ts
 ├── photos/
 │   ├── upload.ts
 │   ├── list.ts
@@ -137,7 +141,7 @@ admin/* functions:   reserved concurrency 20
 Total max connections:                     60  (under the ~112 limit)
 ```
 
-Amended 2026-10-09: the authorizer and `auth/get` are out of the budget. Neither holds a DB connection, so they run outside the VPC with no reserved concurrency; the old `auth/*` login/refresh/logout functions no longer exist.
+Amended 2026-10-09: the authorizer and `auth/*` functions are out of the budget. None holds a DB connection (`auth/*` only call Cognito), so they run outside the VPC with no reserved concurrency.
 
 Requests beyond the concurrency cap are throttled by API Gateway (429). The upside: zero cost, zero new infrastructure, the limit is explicit and visible in the CDK stack. The downside: throughput is capped. Fine for MVP scale.
 

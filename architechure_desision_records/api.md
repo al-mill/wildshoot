@@ -40,7 +40,7 @@ This eliminates the need to validate tokens in every API function. The authorize
 Cognito groups map directly to our API permissions. Admin users get an 'admin' group claim in their JWT. Our authorizer extracts this and makes it available to API functions, so admin-only endpoints just check `event.requestContext.authorizer.groups`.
 
 **Session Management:**
-Rather than building custom session handling, we leverage Cognito's token refresh system. When access tokens are about to expire (or the API returns a 401), the frontend refreshes them directly with Cognito (`REFRESH_TOKEN_AUTH`) — there is no refresh endpoint of our own. We don't store sensitive session data on the server.
+Rather than building custom session handling, we leverage Cognito's token refresh system. When access tokens are about to expire (or the API returns a 401), the frontend calls our refresh endpoint, which uses Cognito's refresh token flow. We don't store sensitive session data on the server.
 
 ### S3 Image Upload Integration
 
@@ -79,7 +79,7 @@ Frontend (Nuxt/Vue)
         ↓
 API Gateway (/api/*)
         ├── Lambda Authorizer (validates Cognito JWT)
-        ├── /auth → Current user (from authorizer context)
+        ├── /auth/* → Auth Lambda Functions
         ├── /photos/* → Photo Lambda Functions
         └── /admin/* → Admin Lambda Functions
         ↓
@@ -93,11 +93,13 @@ Backend Services
 
 ### API Endpoint Structure
 
-Sign-up, sign-in, refresh and sign-out go from the browser straight to Cognito, so `/api/auth` has no login/refresh/logout endpoints — only `GET` for the current user (amended 2026-10-09; see auth ADR).
+`login` and `refresh` are public; `logout` sits behind the authorizer. Sign-up, email confirmation and password reset still call Cognito directly from the browser.
 
 ```
 /api/auth
-  GET  /           → Current user (sub, groups, isAdmin) from the authorizer
+  POST /login      → Exchange email/password for JWT tokens
+  POST /refresh    → Get new access token using refresh token
+  POST /logout     → Invalidate refresh token
 
 /api/photos
   GET  /           → List user's photos (paginated)
@@ -121,7 +123,9 @@ lambda/
 ├── authorizers/
 │   └── cognito.ts         → Token validation logic
 ├── auth/
-│   └── get.ts             → Current user from authorizer context
+│   ├── login.ts           → Handle Cognito authentication
+│   ├── refresh.ts         → Token refresh logic
+│   └── logout.ts          → Session cleanup
 ├── photos/
 │   ├── upload.ts          → Process photo uploads
 │   ├── list.ts            → Fetch user photos

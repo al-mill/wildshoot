@@ -3,6 +3,7 @@ import type {
   APIGatewayAuthorizerResult,
   APIGatewayTokenAuthorizerEvent,
 } from 'aws-lambda';
+import { bearerToken } from '../_shared/auth';
 import { requireEnv } from '../_shared/env';
 
 // Module scope so the JWKS fetched on the first verify is reused by warm invocations.
@@ -18,7 +19,7 @@ const unauthorized = () => new Error('Unauthorized');
 export async function handler(
   event: APIGatewayTokenAuthorizerEvent
 ): Promise<APIGatewayAuthorizerResult> {
-  const token = /^Bearer (\S+)$/.exec(event.authorizationToken)?.[1];
+  const token = bearerToken(event.authorizationToken);
   if (!token) throw unauthorized();
 
   const payload = await verifier.verify(token).catch(() => {

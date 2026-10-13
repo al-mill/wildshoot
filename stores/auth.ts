@@ -159,9 +159,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function logout(): Promise<void> {
     try {
-      // GlobalSignOut needs a live access token; an expired one would leave the refresh token unrevoked.
+      // Logout sits behind the authorizer; an expired token would be rejected and leave the refresh token unrevoked.
       const accessToken = await getAccessToken();
-      if (accessToken) await cognito.globalSignOut(accessToken);
+      if (accessToken) await cognito.signOut(accessToken);
     } finally {
       clearSession();
     }

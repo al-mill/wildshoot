@@ -52,6 +52,7 @@
     "vue": "^3.4.21"
   },
   "devDependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.1150.0",
     "@nuxt/eslint-config": "^0.3.13",
     "@nuxt/test-utils": "^3.12.1",
     "@types/aws-lambda": "^8.10.161",

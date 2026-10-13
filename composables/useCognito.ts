@@ -7,10 +7,13 @@ export interface CognitoSession {
   payload: Record<string, unknown>;
 }
 
+// Login, refresh and logout go through our /api/auth endpoints; sign-up and
+// password reset still call Cognito directly.
 export function useCognito() {
   const config = useRuntimeConfig();
   const endpoint = `https://cognito-idp.${config.public.awsRegion}.amazonaws.com/`;
   const clientId = config.public.cognitoClientId;
+  const apiUrl = String(config.public.apiUrl ?? '').replace(/\/$/, '');
 
   async function request(target: string, body: Record<string, unknown>) {
     const response = await fetch(endpoint, {
@@ -24,6 +27,25 @@ export function useCognito() {
     const data = await response.json();
     if (!response.ok) {
       throw { code: data.__type, message: data.message };
+    }
+    return data;
+  }
+
+  async function authApi(
+    path: 'login' | 'refresh' | 'logout',
+    body: Record<string, unknown>,
+    accessToken?: string
+  ) {
+    const headers = new Headers({ 'Content-Type': 'application/json' });
+    if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+    const response = await fetch(`${apiUrl}/api/auth/${path}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw { code: data.code, message: data.message };
     }
     return data;
   }
@@ -49,33 +71,27 @@ export function useCognito() {
     email: string,
     password: string
   ): Promise<CognitoSession> {
-    const data = await request('InitiateAuth', {
-      AuthFlow: 'USER_PASSWORD_AUTH',
-      ClientId: clientId,
-      AuthParameters: { USERNAME: email, PASSWORD: password },
+    const { idToken, accessToken, refreshToken } = await authApi('login', {
+      email,
+      password,
     });
-    const { IdToken, AccessToken, RefreshToken } = data.AuthenticationResult;
     return {
-      idToken: IdToken,
-      accessToken: AccessToken,
-      refreshToken: RefreshToken,
-      payload: decodeJwtPayload(IdToken),
+      idToken,
+      accessToken,
+      refreshToken,
+      payload: decodeJwtPayload(idToken),
     };
   }
 
-  // The pool doesn't enable refresh-token rotation, so only new access/id tokens come back.
   async function refreshSession(refreshToken: string) {
-    const data = await request('InitiateAuth', {
-      AuthFlow: 'REFRESH_TOKEN_AUTH',
-      ClientId: clientId,
-      AuthParameters: { REFRESH_TOKEN: refreshToken },
+    const { idToken, accessToken } = await authApi('refresh', {
+      refreshToken,
     });
-    const { IdToken, AccessToken } = data.AuthenticationResult;
-    return { idToken: IdToken, accessToken: AccessToken };
+    return { idToken, accessToken };
   }
 
-  async function globalSignOut(accessToken: string) {
-    await request('GlobalSignOut', { AccessToken: accessToken });
+  async function signOut(accessToken: string) {
+    await authApi('logout', {}, accessToken);
   }
 
   async function forgotPassword(email: string) {
@@ -100,7 +116,7 @@ export function useCognito() {
     confirmSignUp,
     signIn,
     refreshSession,
-    globalSignOut,
+    signOut,
     forgotPassword,
     resetPassword,
   };

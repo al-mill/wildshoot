@@ -42,9 +42,13 @@ export class ApiConstruct extends Construct {
       USER_POOL_ID: props.userPool.userPoolId,
       CLIENT_ID: props.userPoolClient.userPoolClientId,
     });
-    const getAuthFn = fn('GetAuth', 'auth/get.ts', {
+    const authEnv = {
+      CLIENT_ID: props.userPoolClient.userPoolClientId,
       ALLOWED_ORIGIN: props.allowedOrigin,
-    });
+    };
+    const loginFn = fn('AuthLogin', 'auth/login.ts', authEnv);
+    const refreshFn = fn('AuthRefresh', 'auth/refresh.ts', authEnv);
+    const logoutFn = fn('AuthLogout', 'auth/logout.ts', authEnv);
 
     this.api = new apigateway.RestApi(this, 'RestApi', {
       restApiName: `wildshoot-${props.stage}`,
@@ -76,10 +80,17 @@ export class ApiConstruct extends Construct {
       resultsCacheTtl: cdk.Duration.minutes(5),
     });
 
-    this.api.root
-      .addResource('api')
-      .addResource('auth')
-      .addMethod('GET', new apigateway.LambdaIntegration(getAuthFn), {
+    // Login and refresh are how a caller gets a token, so only logout sits behind the authorizer.
+    const auth = this.api.root.addResource('api').addResource('auth');
+    auth
+      .addResource('login')
+      .addMethod('POST', new apigateway.LambdaIntegration(loginFn));
+    auth
+      .addResource('refresh')
+      .addMethod('POST', new apigateway.LambdaIntegration(refreshFn));
+    auth
+      .addResource('logout')
+      .addMethod('POST', new apigateway.LambdaIntegration(logoutFn), {
         authorizer,
       });
 

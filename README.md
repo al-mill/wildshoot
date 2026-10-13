@@ -29,7 +29,7 @@ npm install
 cp .env.example .env
 ```
 
-Auth is real Cognito; photos and admin data are still mock store data. Fill these in `.env` from the `wildshoot-staging` stack outputs (`npm run deploy:staging` prints them):
+Auth is real Cognito; photos and admin data are still mock store data. Login, refresh and logout go through the deployed API (`/api/auth/*`), so `NUXT_PUBLIC_API_URL` must be set. Fill these in `.env` from the `wildshoot-staging` stack outputs (`npm run deploy:staging` prints them):
 
 | `.env` key                         | Stack output       |
 | ---------------------------------- | ------------------ |

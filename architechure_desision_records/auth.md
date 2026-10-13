@@ -67,8 +67,8 @@ Gets us managed user auth + flexible business logic while staying free.
 ## How it actually works
 
 ```
-1. User logs in → browser gets tokens straight from Cognito
-2. Browser keeps them in Secure, SameSite=Strict cookies and refreshes the access token with Cognito before it expires
+1. User logs in via `POST /api/auth/login` → our Lambda exchanges the credentials with Cognito and returns the tokens
+2. Browser keeps them in Secure, SameSite=Strict cookies and refreshes the access token via `POST /api/auth/refresh` before it expires
 3. API calls go through API Gateway with the access token
 4. Our Lambda authorizer validates the token
 5. If good, request goes to our app logic with user context (id + groups)
@@ -106,6 +106,6 @@ We're caching the JWT validation keys and auth decisions to keep things fast. Go
 
 **Ownership and business rules moved from the authorizer to the handlers.** API Gateway caches the authorizer's decision per token and reuses it for every route, so a per-photo decision there would be wrong on the next route. Checking ownership would also put the authorizer in the VPC with a DB connection. It now only verifies the token, runs outside the VPC, and needs no DB.
 
-**Tokens live in the browser, not on a Nuxt server.** Sign-up, sign-in, sign-out and refresh call Cognito directly from the browser, and there is no Nuxt server hosting yet. Tokens sit in `Secure`, `SameSite=Strict` cookies that JavaScript can read, so an XSS bug could steal them. Revisit (Nuxt server routes + httpOnly cookies) once the frontend is hosted.
+**Tokens live in the browser, not on a Nuxt server.** Login, refresh and logout go through `/api/auth/*`; sign-up, confirmation and password reset call Cognito directly from the browser. There is no Nuxt server hosting yet, so the API returns tokens in the response body. Tokens sit in `Secure`, `SameSite=Strict` cookies that JavaScript can read, so an XSS bug could steal them. Revisit (Nuxt server routes + httpOnly cookies) once the frontend is hosted.
 
 **Logout limit.** `GlobalSignOut` revokes the refresh token, but an access token already issued still verifies offline until it expires (≤ 1 h), plus up to 5 min of authorizer cache.

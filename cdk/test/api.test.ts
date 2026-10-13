@@ -8,16 +8,29 @@ const template = Template.fromStack(
   new WildshootStack(new App(), 'Test', { stage: 'test' })
 );
 
-const findFunction = (envVar: string) => {
-  const matches = template.findResources('AWS::Lambda::Function', {
-    Properties: {
-      Environment: {
-        Variables: Match.objectLike({ [envVar]: Match.anyValue() }),
+const functionsWithEnv = (envVar: string) =>
+  Object.values(
+    template.findResources('AWS::Lambda::Function', {
+      Properties: {
+        Environment: {
+          Variables: Match.objectLike({ [envVar]: Match.anyValue() }),
+        },
       },
-    },
-  });
-  const [fn] = Object.values(matches);
-  return fn.Properties;
+    })
+  ).map(fn => fn.Properties);
+
+const postAuthorizationType = (pathPart: string) => {
+  const [resourceId] = Object.keys(
+    template.findResources('AWS::ApiGateway::Resource', {
+      Properties: { PathPart: pathPart },
+    })
+  );
+  const [method] = Object.values(
+    template.findResources('AWS::ApiGateway::Method', {
+      Properties: { HttpMethod: 'POST', ResourceId: { Ref: resourceId } },
+    })
+  );
+  return method.Properties.AuthorizationType;
 };
 
 describe('ApiConstruct', () => {
@@ -35,15 +48,17 @@ describe('ApiConstruct', () => {
     });
   });
 
-  it('protects GET /api/auth with the authorizer', () => {
-    template.hasResourceProperties('AWS::ApiGateway::Resource', {
-      PathPart: 'auth',
+  it('leaves login and refresh public and protects logout', () => {
+    expect(postAuthorizationType('login')).toBe('NONE');
+    expect(postAuthorizationType('refresh')).toBe('NONE');
+    expect(postAuthorizationType('logout')).toBe('CUSTOM');
+  });
+
+  it('has no GET route under /api/auth', () => {
+    const gets = template.findResources('AWS::ApiGateway::Method', {
+      Properties: { HttpMethod: 'GET' },
     });
-    template.hasResourceProperties('AWS::ApiGateway::Method', {
-      HttpMethod: 'GET',
-      AuthorizationType: 'CUSTOM',
-      AuthorizerId: Match.anyValue(),
-    });
+    expect(Object.keys(gets)).toHaveLength(0);
   });
 
   it('leaves CORS preflight unauthenticated', () => {
@@ -69,17 +84,26 @@ describe('ApiConstruct', () => {
     }
   });
 
-  it('runs the authorizer outside the VPC with no reserved concurrency', () => {
-    const authorizer = findFunction('USER_POOL_ID');
-    expect(authorizer.Runtime).toBe('nodejs24.x');
-    expect(authorizer.VpcConfig).toBeUndefined();
-    expect(authorizer.ReservedConcurrentExecutions).toBeUndefined();
+  it('runs every function on Node 24 outside the VPC with no reserved concurrency', () => {
+    const functions = Object.values(
+      template.findResources('AWS::Lambda::Function')
+    ).map(fn => fn.Properties);
+    expect(functions).toHaveLength(4);
+    for (const fn of functions) {
+      expect(fn.Runtime).toBe('nodejs24.x');
+      expect(fn.VpcConfig).toBeUndefined();
+      expect(fn.ReservedConcurrentExecutions).toBeUndefined();
+    }
   });
 
-  it('passes the allowed origin to the /api/auth handler', () => {
-    const getAuth = findFunction('ALLOWED_ORIGIN');
-    expect(getAuth.Environment.Variables.ALLOWED_ORIGIN).toBe(
-      'http://localhost:3000'
-    );
+  it('passes the client id and allowed origin to the three auth handlers', () => {
+    const handlers = functionsWithEnv('ALLOWED_ORIGIN');
+    expect(handlers).toHaveLength(3);
+    for (const fn of handlers) {
+      expect(fn.Environment.Variables.ALLOWED_ORIGIN).toBe(
+        'http://localhost:3000'
+      );
+      expect(fn.Environment.Variables.CLIENT_ID).toBeDefined();
+    }
   });
 });
