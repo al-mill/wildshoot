@@ -57,9 +57,18 @@ export const useAuthStore = defineStore('auth', () => {
     if (current && !forceRefresh && !isExpiring(current)) return current;
     try {
       return await refreshAccessToken();
-    } catch {
-      clearSession();
-      return null;
+    } catch (err) {
+      // Only a missing or rejected refresh token ends the session; transient failures are worth retrying.
+      const rejected =
+        typeof err === 'object' &&
+        err !== null &&
+        'code' in err &&
+        err.code === 'NotAuthorizedException';
+      if (!refreshCookie.value || rejected) {
+        clearSession();
+        return null;
+      }
+      throw err;
     }
   }
 
