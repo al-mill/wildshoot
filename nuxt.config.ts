@@ -3,6 +3,10 @@ export default defineNuxtConfig({
   compatibilityDate: '2026-05-19',
   devtools: { enabled: true },
 
+  // Nitro's dev watcher ignores **/node_modules/**, which misses checkouts under a dot folder
+  // (e.g. .claude/worktrees) and then watches every package until macOS runs out of handles.
+  ignore: ['node_modules'],
+
   // TypeScript configuration
   typescript: {
     typeCheck: true,
