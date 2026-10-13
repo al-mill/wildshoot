@@ -1,6 +1,7 @@
 // Turns raw `cdk diff` output into the PR comment: one line per stack, with the
 // diff of each changed stack folded into a <details> block.
-// Preview locally: `npx dotenv -- cdk diff --context stage=staging 2>&1 | node scripts/cdk-diff-comment.mjs`
+// Preview locally, passing cdk's exit code:
+// `npx dotenv -- cdk diff --context stage=staging > cdk-diff.txt 2>&1; node scripts/cdk-diff-comment.mjs $? < cdk-diff.txt`
 import { readFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 
@@ -117,5 +118,7 @@ export function formatDiff(output, exitCode) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
-  console.log(formatDiff(readFileSync(0, 'utf8'), 0));
+  console.log(
+    formatDiff(readFileSync(0, 'utf8'), Number(process.argv[2] ?? 0))
+  );
 }

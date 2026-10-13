@@ -123,7 +123,7 @@ Staging and production are separate CDK stacks:
 Every PR gets an **Infrastructure diff** comment against staging. To preview it locally:
 
 ```bash
-npx dotenv -- cdk diff --context stage=staging 2>&1 | node scripts/cdk-diff-comment.mjs
+npx dotenv -- cdk diff --context stage=staging > cdk-diff.txt 2>&1; node scripts/cdk-diff-comment.mjs $? < cdk-diff.txt
 ```
 
 ## License
