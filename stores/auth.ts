@@ -1,4 +1,5 @@
 import { cognitoErrorMessage, useCognito } from '~/composables/useCognito';
+import { isExpiring, singleFlight } from '~/utils/session';
 
 interface AuthUser {
   id: string;
@@ -10,15 +11,17 @@ interface AuthUser {
 export const useAuthStore = defineStore('auth', () => {
   const cognito = useCognito();
 
-  const userCookie = useCookie<AuthUser | null>('ws_user', {
-    maxAge: 60 * 60 * 24 * 30,
-  });
-  const accessCookie = useCookie<string | null>('ws_access', {
-    maxAge: 60 * 60,
-  });
-  const refreshCookie = useCookie<string | null>('ws_refresh', {
-    maxAge: 60 * 60 * 24 * 30,
-  });
+  const sessionCookie = <T>(name: string, maxAge: number) =>
+    useCookie<T | null>(name, {
+      maxAge,
+      path: '/',
+      sameSite: 'strict',
+      secure: !import.meta.dev,
+    });
+
+  const userCookie = sessionCookie<AuthUser>('ws_user', 60 * 60 * 24 * 30);
+  const accessCookie = sessionCookie<string>('ws_access', 60 * 60);
+  const refreshCookie = sessionCookie<string>('ws_refresh', 60 * 60 * 24 * 30);
 
   const user = ref<AuthUser | null>(null);
   const isLoading = ref(false);
@@ -28,8 +31,44 @@ export const useAuthStore = defineStore('auth', () => {
   const isAdmin = computed(() => user.value?.isAdmin ?? false);
 
   function init() {
-    if (userCookie.value) {
+    if (userCookie.value && refreshCookie.value) {
       user.value = userCookie.value;
+    } else if (userCookie.value) {
+      clearSession();
+    }
+  }
+
+  function clearSession() {
+    user.value = null;
+    userCookie.value = null;
+    accessCookie.value = null;
+    refreshCookie.value = null;
+  }
+
+  const refreshAccessToken = singleFlight(async () => {
+    if (!refreshCookie.value) throw new Error('No refresh token');
+    const { accessToken } = await cognito.refreshSession(refreshCookie.value);
+    accessCookie.value = accessToken;
+    return accessToken;
+  });
+
+  async function getAccessToken(forceRefresh = false): Promise<string | null> {
+    const current = accessCookie.value;
+    if (current && !forceRefresh && !isExpiring(current)) return current;
+    try {
+      return await refreshAccessToken();
+    } catch (err) {
+      // Only a missing or rejected refresh token ends the session; transient failures are worth retrying.
+      const rejected =
+        typeof err === 'object' &&
+        err !== null &&
+        'code' in err &&
+        err.code === 'NotAuthorizedException';
+      if (!refreshCookie.value || rejected) {
+        clearSession();
+        return null;
+      }
+      throw err;
     }
   }
 
@@ -129,14 +168,11 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function logout(): Promise<void> {
     try {
-      if (accessCookie.value) {
-        await cognito.globalSignOut(accessCookie.value);
-      }
+      // Logout sits behind the authorizer; an expired token would be rejected and leave the refresh token unrevoked.
+      const accessToken = await getAccessToken();
+      if (accessToken) await cognito.signOut(accessToken);
     } finally {
-      user.value = null;
-      userCookie.value = null;
-      accessCookie.value = null;
-      refreshCookie.value = null;
+      clearSession();
     }
   }
 
@@ -147,6 +183,8 @@ export const useAuthStore = defineStore('auth', () => {
     isLoggedIn,
     isAdmin,
     init,
+    clearSession,
+    getAccessToken,
     login,
     register,
     confirmSignUp,

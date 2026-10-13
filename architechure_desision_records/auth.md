@@ -42,10 +42,13 @@ Cognito does:
 
 Our Lambda authorizer does:
 
-- Validates the JWT from Cognito
-- Checks if user owns the photo they're trying to access
-- Handles subscription limits and business rules
-- Passes user info to our app logic
+- Validates the Cognito access token (signature, expiry, client)
+- Passes user id and groups to our app logic
+
+Our handlers do (amended 2026-10-09, see below):
+
+- Photo ownership checks (`WHERE user_id = $1`)
+- Subscription limits and business rules
 
 ## Other options we looked at
 
@@ -64,14 +67,14 @@ Gets us managed user auth + flexible business logic while staying free.
 ## How it actually works
 
 ```
-1. User logs in → gets JWT from Cognito
-2. Nuxt server stores tokens securely
-3. API calls go through API Gateway with the JWT
-4. Our Lambda authorizer validates the JWT and checks permissions
-5. If good, request goes to our app logic with user context
+1. User logs in via `POST /api/auth/login` → our Lambda exchanges the credentials with Cognito and returns the tokens
+2. Browser keeps them in Secure, SameSite=Strict cookies and refreshes the access token via `POST /api/auth/refresh` before it expires
+3. API calls go through API Gateway with the access token
+4. Our Lambda authorizer validates the token
+5. If good, request goes to our app logic with user context (id + groups)
 ```
 
-The Lambda authorizer is where the magic happens - it gets the JWT, makes sure it's legit, checks if the user can do what they're asking (like "does this user own this photo?"), and then passes along user info to our main functions.
+The Lambda authorizer gets the token, makes sure it's legit, and passes user info along. Handlers decide what that user may do (like "does this user own this photo?").
 
 ## What this gets us
 
@@ -98,3 +101,11 @@ The Lambda authorizer is where the magic happens - it gets the JWT, makes sure i
 
 **If this bites us later:**
 We're caching the JWT validation keys and auth decisions to keep things fast. Got monitoring set up for auth failures. If we grow big, costs are still reasonable (~$5-15/month for 10k daily users).
+
+## Amendment — 2026-10-09
+
+**Ownership and business rules moved from the authorizer to the handlers.** API Gateway caches the authorizer's decision per token and reuses it for every route, so a per-photo decision there would be wrong on the next route. Checking ownership would also put the authorizer in the VPC with a DB connection. It now only verifies the token, runs outside the VPC, and needs no DB.
+
+**Tokens live in the browser, not on a Nuxt server.** Login, refresh and logout go through `/api/auth/*`; sign-up, confirmation and password reset call Cognito directly from the browser. There is no Nuxt server hosting yet, so the API returns tokens in the response body. Tokens sit in `Secure`, `SameSite=Strict` cookies that JavaScript can read, so an XSS bug could steal them. Revisit (Nuxt server routes + httpOnly cookies) once the frontend is hosted.
+
+**Logout limit.** `GlobalSignOut` revokes the refresh token, but an access token already issued still verifies offline until it expires (≤ 1 h), plus up to 5 min of authorizer cache.

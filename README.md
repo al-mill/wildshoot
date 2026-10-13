@@ -29,7 +29,13 @@ npm install
 cp .env.example .env
 ```
 
-No AWS credentials are needed to run the frontend locally — the stores use mock data until the backend is deployed.
+Auth is real Cognito; photos and admin data are still mock store data. Login, refresh and logout go through the deployed API (`/api/auth/*`), so `NUXT_PUBLIC_API_URL` must be set. `npm run staging` deploys the `wildshoot-staging` stack and writes these into `.env` from its outputs:
+
+| `.env` key                         | Stack output       |
+| ---------------------------------- | ------------------ |
+| `NUXT_PUBLIC_COGNITO_USER_POOL_ID` | `UserPoolId`       |
+| `NUXT_PUBLIC_COGNITO_CLIENT_ID`    | `UserPoolClientId` |
+| `NUXT_PUBLIC_API_URL`              | `ApiUrl`           |
 
 ### Run the dev server
 
@@ -38,34 +44,34 @@ npm run dev
 # → http://localhost:3000
 ```
 
-**Test credentials (mock only):**
+Register at `/register` and confirm with the emailed code. Admin access comes from the Cognito `admins` group:
 
-| Role | Email | Password |
-|---|---|---|
-| User | `any@example.com` | anything |
-| Admin | `admin@example.com` | anything |
+```bash
+aws cognito-idp admin-add-user-to-group --user-pool-id <UserPoolId> \
+  --username <email> --group-name admins --profile wildshoot
+```
 
-Any email starting with `admin` grants access to the `/admin` routes.
+Log out and back in to pick up the group. The API only accepts browser calls from `http://localhost:3000` for now (see `architechure_desision_records/api.md` → Open items).
 
 ### Scripts
 
-| Command | Description |
-|---|---|
-| `npm run dev` | Start Nuxt dev server |
-| `npm run build` | Build for production |
-| `npm run preview` | Preview production build |
-| `npm run test` | Run unit tests |
-| `npm run lint` | Run ESLint |
-| `npm run type-check` | TypeScript type check |
+| Command              | Description              |
+| -------------------- | ------------------------ |
+| `npm run dev`        | Start Nuxt dev server    |
+| `npm run build`      | Build for production     |
+| `npm run preview`    | Preview production build |
+| `npm run test`       | Run unit tests           |
+| `npm run lint`       | Run ESLint               |
+| `npm run type-check` | TypeScript type check    |
 
 ### CDK scripts
 
-| Command | Description |
-|---|---|
-| `npm run cdk:synth` | Synthesise CloudFormation template |
-| `npm run deploy:staging` | Deploy to staging |
-| `npm run deploy:production` | Deploy to production |
-| `npm run bootstrap` | Bootstrap CDK in a new AWS account/region |
+| Command                     | Description                                      |
+| --------------------------- | ------------------------------------------------ |
+| `npm run cdk:synth`         | Synthesise CloudFormation template               |
+| `npm run staging`           | Deploy staging and write its outputs into `.env` |
+| `npm run deploy:production` | Deploy to production                             |
+| `npm run bootstrap`         | Bootstrap CDK in a new AWS account/region        |
 
 ## Project Structure
 
@@ -74,6 +80,7 @@ wildshoot/
 ├── assets/css/          # Global CSS (design tokens)
 ├── cdk/
 │   ├── bin/app.ts       # CDK entry point
+│   ├── lib/constructs/  # Auth, API, network, database, storage
 │   └── lib/stacks/      # Stack definitions
 ├── components/
 │   ├── admin/           # Admin-only components
@@ -81,7 +88,8 @@ wildshoot/
 │   ├── PhotoCard.vue
 │   ├── PhotoGrid.vue
 │   └── UploadForm.vue
-├── composables/         # useApi — fetch wrapper for real API calls
+├── composables/         # useApi (API calls + token refresh), useCognito
+├── lambda/              # Lambda handlers: authorizers/, auth/, _shared/
 ├── layouts/
 │   ├── default.vue      # Main layout with header
 │   └── admin.vue        # Admin layout with sidebar
@@ -94,7 +102,7 @@ wildshoot/
 │   ├── register.vue
 │   ├── upload.vue
 │   └── admin/           # Dashboard, users, photos
-├── stores/              # Pinia stores (mock data — swap for real API)
+├── stores/              # Pinia stores (auth is real; photos/admin still mock)
 │   ├── auth.ts
 │   ├── photos.ts
 │   └── admin.ts
@@ -103,14 +111,14 @@ wildshoot/
 
 ## Connecting to the Real Backend
 
-Each store action has a `// TODO:` comment showing the API endpoint to replace the mock with. Once the backend is deployed, swap the mock `wait()` calls for the corresponding `useApi()` calls from `composables/useApi.ts`.
+Each photos/admin store action has a `// TODO:` comment showing the API endpoint to replace the mock with. Swap the mock `wait()` calls for `useApi()` calls from `composables/useApi.ts`, which sends the Cognito access token and refreshes it on a 401.
 
 ## Deployment
 
-Staging and production are separate CDK stacks deployed via GitHub Actions:
+Staging and production are separate CDK stacks:
 
-- Push to `main` → deploy to staging
-- Manual approval → deploy to production
+- Staging → `npm run staging` locally (runs `aws sso login` first if the session has expired)
+- Production → the manual **Deploy → Production** GitHub Actions workflow
 
 ## License
 

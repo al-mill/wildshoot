@@ -40,7 +40,7 @@ This eliminates the need to validate tokens in every API function. The authorize
 Cognito groups map directly to our API permissions. Admin users get an 'admin' group claim in their JWT. Our authorizer extracts this and makes it available to API functions, so admin-only endpoints just check `event.requestContext.authorizer.groups`.
 
 **Session Management:**
-Rather than building custom session handling, we leverage Cognito's token refresh system. When access tokens expire, the frontend calls our refresh endpoint, which uses Cognito's refresh token flow. Clean, secure, and we don't store sensitive session data anywhere.
+Rather than building custom session handling, we leverage Cognito's token refresh system. When access tokens are about to expire (or the API returns a 401), the frontend calls our refresh endpoint, which uses Cognito's refresh token flow. We don't store sensitive session data on the server.
 
 ### S3 Image Upload Integration
 
@@ -93,6 +93,8 @@ Backend Services
 
 ### API Endpoint Structure
 
+`login` and `refresh` are public; `logout` sits behind the authorizer. Sign-up, email confirmation and password reset still call Cognito directly from the browser.
+
 ```
 /api/auth
   POST /login      → Exchange email/password for JWT tokens
@@ -119,7 +121,7 @@ We're organizing by feature, not by HTTP method:
 ```
 lambda/
 ├── authorizers/
-│   └── cognito-auth.ts    → Token validation logic
+│   └── cognito.ts         → Token validation logic
 ├── auth/
 │   ├── login.ts           → Handle Cognito authentication
 │   ├── refresh.ts         → Token refresh logic
@@ -196,3 +198,7 @@ Lambda functions share a connection pool through Lambda Layers. Each function ca
 - Zero-downtime deployments
 - Monthly costs under $50 during first year
 - Development team can deploy new endpoints within one day
+
+## Open items
+
+- [ ] **CORS is localhost-only.** The API allows only `http://localhost:3000` (`FRONTEND_ORIGIN` in `cdk/lib/stacks/wildshoot-stack.ts`, used for preflight, gateway error responses and handler responses). When the frontend is hosted, set the real origin per stage and decide whether staging should still accept localhost.

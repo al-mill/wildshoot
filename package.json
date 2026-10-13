@@ -17,7 +17,7 @@
     "cdk:synth": "dotenv -- cdk synth",
     "cdk:deploy": "dotenv -- cdk deploy",
     "cdk:destroy": "dotenv -- cdk destroy",
-    "deploy:staging": "dotenv -- cdk deploy --context stage=staging",
+    "staging": "dotenv -- node scripts/staging.mjs",
     "deploy:production": "dotenv -- cdk deploy --context stage=production",
     "bootstrap": "dotenv -- cdk bootstrap",
     "prepare": "husky install"
@@ -52,6 +52,7 @@
     "vue": "^3.4.21"
   },
   "devDependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.1150.0",
     "@nuxt/eslint-config": "^0.3.13",
     "@nuxt/test-utils": "^3.12.1",
     "@types/aws-lambda": "^8.10.161",
@@ -65,6 +66,7 @@
     "aws-cdk-lib": "^2.139.0",
     "constructs": "^10.3.0",
     "dotenv-cli": "^11.0.0",
+    "esbuild": "^0.25.12",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.3",
