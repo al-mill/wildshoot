@@ -42,10 +42,12 @@ function tidy(lines) {
 
 function summarise(diff) {
   const count = pattern => diff.split('\n').filter(l => pattern.test(l)).length;
+  // Removed resources with a Retain policy are marked "orphan": left in the account, not deleted.
   const parts = [
     [count(/^\[\+\] AWS::/), 'to add'],
     [count(/^\[~\] AWS::/), 'to update'],
-    [count(/^\[-\] AWS::/), 'to destroy'],
+    [count(/^\[-\] AWS::(?!.* orphan$)/), 'to destroy'],
+    [count(/^\[-\] AWS::.* orphan$/), 'to orphan (kept)'],
   ]
     .filter(([n]) => n > 0)
     .map(([n, label]) => `${n} ${label}`);
@@ -81,18 +83,33 @@ export function formatDiff(output, exitCode) {
     ].join('\n\n');
   }
 
-  const changed = stacks.filter(
-    stack => !stack.lines.some(l => l.startsWith('There were no differences'))
+  const diffs = new Map(
+    stacks
+      .filter(
+        stack =>
+          !stack.lines.some(l => l.startsWith('There were no differences'))
+      )
+      .map(stack => [stack, tidy(stack.lines)])
   );
-  const limit = Math.floor(MAX_DIFF_LENGTH / Math.max(1, changed.length));
+
+  // Smallest diffs first, so whatever a stack doesn't use passes to the bigger ones.
+  const limits = new Map();
+  let budget = MAX_DIFF_LENGTH;
+  [...diffs]
+    .sort(([, a], [, b]) => a.length - b.length)
+    .forEach(([stack, diff], i, sorted) => {
+      const limit = Math.floor(budget / (sorted.length - i));
+      limits.set(stack, limit);
+      budget -= Math.min(diff.length, limit);
+    });
 
   const sections = stacks.map(stack => {
-    if (!changed.includes(stack)) return `**${stack.name}**: ✅ No changes`;
-    const diff = tidy(stack.lines);
+    const diff = diffs.get(stack);
+    if (diff === undefined) return `**${stack.name}**: ✅ No changes`;
     return details(
       `<strong>${stack.name}</strong>: ${summarise(diff)}`,
       diff,
-      limit
+      limits.get(stack)
     );
   });
 

@@ -63,4 +63,36 @@ describe('formatDiff', () => {
     expect(body.length).toBeLessThan(65536);
     expect(body).toContain('… truncated, see the CDK diff job log');
   });
+
+  it('counts retained resources as orphaned, not destroyed', () => {
+    const body = formatDiff(
+      output(
+        'Stack Wildshoot-production',
+        '[-] AWS::RDS::DBInstance Database Database123 orphan',
+        '[-] AWS::SNS::Topic Old OldTopic000 destroy'
+      ),
+      0
+    );
+
+    expect(body).toContain('1 to destroy · 1 to orphan (kept)');
+  });
+
+  it('gives a big diff the budget a small one leaves unused', () => {
+    const big = Array.from(
+      { length: 1000 },
+      (_, i) => `[+] AWS::IAM::Policy Policy${i} Policy${i}ABCDEF`
+    );
+    const body = formatDiff(
+      output(
+        'Stack WildshootCi',
+        '[~] AWS::IAM::Role DeployRole DeployRole885297C3',
+        'Stack Wildshoot-staging',
+        ...big
+      ),
+      0
+    );
+
+    expect(big.join('\n').length).toBeGreaterThan(30000);
+    expect(body).not.toContain('truncated');
+  });
 });
