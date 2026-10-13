@@ -29,7 +29,7 @@ npm install
 cp .env.example .env
 ```
 
-Auth is real Cognito; photos and admin data are still mock store data. Login, refresh and logout go through the deployed API (`/api/auth/*`), so `NUXT_PUBLIC_API_URL` must be set. Fill these in `.env` from the `wildshoot-staging` stack outputs (`npm run deploy:staging` prints them):
+Auth is real Cognito; photos and admin data are still mock store data. Login, refresh and logout go through the deployed API (`/api/auth/*`), so `NUXT_PUBLIC_API_URL` must be set. `npm run staging` deploys the `wildshoot-staging` stack and writes these into `.env` from its outputs:
 
 | `.env` key                         | Stack output       |
 | ---------------------------------- | ------------------ |
@@ -66,12 +66,12 @@ Log out and back in to pick up the group. The API only accepts browser calls fro
 
 ### CDK scripts
 
-| Command                     | Description                               |
-| --------------------------- | ----------------------------------------- |
-| `npm run cdk:synth`         | Synthesise CloudFormation template        |
-| `npm run deploy:staging`    | Deploy to staging                         |
-| `npm run deploy:production` | Deploy to production                      |
-| `npm run bootstrap`         | Bootstrap CDK in a new AWS account/region |
+| Command                     | Description                                      |
+| --------------------------- | ------------------------------------------------ |
+| `npm run cdk:synth`         | Synthesise CloudFormation template               |
+| `npm run staging`           | Deploy staging and write its outputs into `.env` |
+| `npm run deploy:production` | Deploy to production                             |
+| `npm run bootstrap`         | Bootstrap CDK in a new AWS account/region        |
 
 ## Project Structure
 
@@ -117,7 +117,7 @@ Each photos/admin store action has a `// TODO:` comment showing the API endpoint
 
 Staging and production are separate CDK stacks:
 
-- Staging → `npm run deploy:staging` locally (run `aws sso login --profile wildshoot` first)
+- Staging → `npm run staging` locally (runs `aws sso login` first if the session has expired)
 - Production → the manual **Deploy → Production** GitHub Actions workflow
 
 ## License

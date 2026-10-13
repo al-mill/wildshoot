@@ -17,7 +17,7 @@
     "cdk:synth": "dotenv -- cdk synth",
     "cdk:deploy": "dotenv -- cdk deploy",
     "cdk:destroy": "dotenv -- cdk destroy",
-    "deploy:staging": "dotenv -- cdk deploy --context stage=staging",
+    "staging": "dotenv -- node scripts/staging.mjs",
     "deploy:production": "dotenv -- cdk deploy --context stage=production",
     "bootstrap": "dotenv -- cdk bootstrap",
     "prepare": "husky install"
