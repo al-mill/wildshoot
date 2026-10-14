@@ -51,7 +51,7 @@ When users upload photos, our Lambda function receives the image data, validates
 
 - Validate image format and size before storage
 - Generate consistent file naming (userId/photoId/filename.jpg)
-- Store metadata in PostgreSQL while file goes to S3
+- Store metadata in DynamoDB while file goes to S3
 - Trigger async processing for thumbnails and optimization
 
 **Presigned URL Alternative:**
@@ -84,7 +84,7 @@ API Gateway (/api/*)
         └── /admin/* → Admin Lambda Functions
         ↓
 Backend Services
-        ├── PostgreSQL (metadata, user data)
+        ├── DynamoDB (metadata, user data, admin counters)
         ├── S3 (original photos, thumbnails)
         └── Cognito (authentication, user management)
 ```
@@ -114,6 +114,10 @@ Backend Services
   DELETE /users/{id} → Remove user account
 ```
 
+### Throttling
+
+(Added 2026-10-14.) API Gateway REST is the one paid item in the stack, at $3.50 per million calls. The stage default throttle is 0.0125 req/s with bursts of 10, and API Gateway applies it to each method separately. Staging and production share the account, so with 6 methods each that caps both APIs together at about 402k calls a month (≈ $1.41). CORS preflight is added only to the routes the browser calls, because each `OPTIONS` method is another billable bucket. A test fails the build if a new route pushes the total over budget. See the cost guardrails ADR.
+
 ### Lambda Function Organization
 
 We're organizing by feature, not by HTTP method:
@@ -141,12 +145,13 @@ Each Lambda function handles one specific operation. This keeps functions small,
 
 ### Database and Storage Strategy
 
-**PostgreSQL for Structured Data:**
+**DynamoDB for Structured Data** (amended 2026-10-13, was PostgreSQL; see the database ADR):
 
-- User profiles and settings
-- Photo metadata (title, description, upload date)
-- Comments and likes
-- Admin analytics and logs
+- User profiles, with a per-user photo count
+- Photo metadata (title, description, location, status, upload date)
+- Admin counters (totals and per-location counts), kept up to date in the same transaction as each write
+
+Comments, likes and logs are not in the MVP schema. Each would need its own items and access patterns in the database ADR.
 
 **S3 for Photo Storage:**
 
@@ -155,11 +160,11 @@ Each Lambda function handles one specific operation. This keeps functions small,
 - Optimized versions: `photos/web/{userId}/{photoId}/`
 
 **Connection Management:**
-Lambda functions share a connection pool through Lambda Layers. Each function can handle 20 concurrent database connections, and we provision based on expected traffic.
+None needed (amended 2026-10-13). DynamoDB is one HTTPS call per request, signed with the function's IAM role, so there is no pool, connection limit or VPC. See the serverless ADR.
 
 ## Benefits
 
-**Cost Efficiency:** Free tier covers MVP entirely. At scale, pay only for actual usage.
+**Cost Efficiency:** Lambda and DynamoDB stay inside their Always Free offers. API Gateway is the one paid item, capped by throttling (amended 2026-10-14, was "Free tier covers MVP entirely"; see the cost guardrails ADR).
 
 **Auto-Scaling:** Handle traffic spikes without configuration. Black Friday photo uploads? AWS scales automatically.
 
@@ -175,7 +180,9 @@ Lambda functions share a connection pool through Lambda Layers. Each function ca
 
 **Cold Starts:** First request to an idle Lambda takes 200-500ms. Mitigated by keeping functions warm during business hours.
 
-**Connection Limits:** 20 database connections per Lambda instance. Could become bottleneck with heavy database usage.
+**Throughput Cap:** the free-tier DynamoDB capacity (12 WCU / 12 RCU per stage) allows about 5 writes/s per stage sustained. Requests over it are throttled to 429.
+
+**API Throttle:** each route handles about one call every 80 s sustained, with bursts of 10. The rate tightens as routes are added. Requests over it get a 429.
 
 **Vendor Lock-in:** Deeply integrated with AWS services. Migration to other cloud providers would require significant rewriting.
 
@@ -196,7 +203,7 @@ Lambda functions share a connection pool through Lambda Layers. Each function ca
 - API response times under 500ms (95th percentile)
 - Photo upload success rate above 99.5%
 - Zero-downtime deployments
-- Monthly costs under $50 during first year
+- Stays within the AWS free tier, a hard requirement, except API Gateway, which throttling caps at ≈ $1.41/month (up to ~$3.50 accepted). Amended 2026-10-13 and 2026-10-14; was "under $50/month during first year".
 - Development team can deploy new endpoints within one day
 
 ## Open items

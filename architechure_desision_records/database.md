@@ -1,151 +1,147 @@
 # Database Architecture
 
+> **Rewritten 2026-10-13.** The first version chose RDS PostgreSQL on the belief that it was free tier. Measured against this account, it isn't (see Option 1). Free tier is a hard requirement, so the decision is now DynamoDB.
+
 ## Context
 
 Wild Shoot needs persistent storage for user profiles, photo metadata, location data, and admin analytics. The key requirements that drive this decision:
 
-- **Analytics queries** — admin dashboard needs aggregate counts per user, location-based stats, and filtered pagination. These are inherently relational.
-- **Lambda integration** — the database must work cleanly with serverless functions that scale horizontally and hold connections briefly.
-- **Free tier** — storage and compute must stay within AWS (or equivalent) free tier for the MVP.
-- **Schema** — four core tables: `users`, `photos`, `locations` (normalised from photo metadata), `sessions` (if not fully delegated to Cognito).
+- **Free tier — hard requirement.** Storage and compute must cost $0 indefinitely, not just for a 12-month or credit window (`spec.md`: "Built entirely on AWS free tier services").
+- **Stay in AWS.** Provisioned and reproduced by CDK like the rest of the stack.
+- **Admin analytics.** Upload counts per user, photo counts per location, a paginated gallery, and filtering by location (`spec.md`, admin features).
+- **Lambda integration.** Works cleanly with functions that scale horizontally.
 
 ---
 
 ## Options Considered
 
-### Option 1 — RDS PostgreSQL on t2.micro
+### Option 1 — RDS PostgreSQL (rejected: not free)
 
-Managed PostgreSQL running on AWS RDS. The t2.micro instance is included in the free tier (750 hours/month, 20 GB storage, automated backups).
+Managed PostgreSQL on a micro instance. Full SQL suits the relational data and the analytics queries.
 
-**Schema fits naturally:**
+Measured 2026-10-13 (account 603013471428, us-west-2):
 
-```sql
-users        (id, cognito_id, name, email, created_at)
-photos       (id, user_id, s3_key, title, description, status, uploaded_at)
-locations    (id, photo_id, name, lat, lng)
-```
+| Finding                                                                                             | Evidence                                                                                                                                                                                                                                        |
+| --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `db.t2.micro` can't run PostgreSQL at all                                                           | `describe-orderable-db-instance-options` returns no PostgreSQL versions for it. `db.t3.micro` and `db.t4g.micro` offer PG 11–18 and 12–18.                                                                                                      |
+| The RDS free tier (750 h + 20 GB) is the legacy **12-month** offer, and this account doesn't get it | The account is a member of an AWS Organization, and AWS grants one free tier per payer account. S3 storage that the 12-month tier would cover is already billed at standard rates. Accounts opened since July 2025 get 6-month credits instead. |
+| Without it, every hour bills                                                                        | `db.t4g.micro` $0.016/h (≈ $11.68/month). Storage $0.115/GB-month: 20 GB is $2.30; CDK's default 100 GiB is $11.50.                                                                                                                             |
+| The VPC it needs isn't free either                                                                  | Lambdas in the VPC need interface endpoints (Secrets Manager, Cognito) at $0.01/h per AZ each (≈ $7.30/month), or a NAT gateway (≈ $32/month). The secret itself is $0.40/month.                                                                |
+| Two stages double it                                                                                | Staging and production share the account. Even a 750 h allowance covers one instance.                                                                                                                                                           |
 
-Analytics queries are straightforward SQL:
-
-```sql
--- Upload counts per user
-SELECT u.name, COUNT(p.id) AS photo_count
-FROM users u LEFT JOIN photos p ON p.user_id = u.id
-GROUP BY u.id ORDER BY photo_count DESC;
-
--- Top locations
-SELECT l.name, COUNT(*) AS count
-FROM locations l JOIN photos p ON p.id = l.photo_id
-WHERE p.status = 'ready'
-GROUP BY l.name ORDER BY count DESC LIMIT 10;
-```
-
-**Upsides:** Full SQL, natural fit for relational data and analytics, well-understood operational model, free tier, stays entirely within AWS.
-
-**Downsides:** Connection limit (~112 on t2.micro) requires the mitigation strategy from the serverless ADR. Lives in a VPC, adding networking complexity.
+As built, that's ≈ $53/month per stage. **Fails the free-tier requirement.**
 
 ---
 
-### Option 2 — DynamoDB
+### Option 2 — DynamoDB (chosen)
 
-AWS's managed NoSQL key-value/document store. Free tier is permanent: 25 GB storage, 25 WCU/RCU (enough for ~200M requests/month at 1 KB items). No connection limits — each request is an independent HTTP call, no TCP pool to manage.
+AWS's managed key-value/document store.
 
-**Single-table design for core access patterns:**
+**Free tier.** 25 GB storage, 25 WCU and 25 RCU each month. Per AWS pricing it is "per Region, per-payer account" and applies to **provisioned** capacity on the Standard table class. It does not expire. No VPC, no connection limit: each request is an independent HTTPS call authorised by the function's IAM role.
 
-```
-PK                    SK                  Attributes
-USER#<id>             PROFILE             name, email, created_at
-USER#<id>             PHOTO#<photo_id>    title, s3_key, status, location, uploaded_at
-```
-
-**Upsides:** No connection limit problem at all — eliminates the entire serverless connection management concern. Scales infinitely. Free tier never expires.
-
-**Downsides:** Analytics queries are painful. Aggregate counts, multi-dimensional filtering, and pagination require either: (a) maintaining separate aggregation tables updated via DynamoDB Streams + Lambda, or (b) expensive full-table scans. The admin dashboard's requirements map badly to DynamoDB's access-pattern-first design. Migrating later if requirements grow is costly.
+**Downside.** Analytics. DynamoDB has no ad-hoc aggregates, so every number the admin dashboard needs must be designed in up front, as a counter or an index (see Design below). A new analytics question means a new counter or index, not a new query.
 
 ---
 
-### Option 3 — Neon Serverless Postgres
+### Option 3 — Neon Serverless Postgres (rejected: not AWS)
 
-Neon is a managed PostgreSQL service built specifically for serverless environments. It uses an HTTP-based connection driver (`@neondatabase/serverless`) instead of TCP, which means no connection pool, no connection limit, and no VPC required. Lambda functions make standard SQL queries over HTTP.
+Postgres over HTTP, no VPC, scales to zero. Free tier: 0.5 GB storage, ~192 compute hours/month.
 
-Free tier: 0.5 GB storage, ~192 compute hours/month (scales to zero when idle).
-
-```typescript
-import { neon } from '@neondatabase/serverless'
-
-const sql = neon(process.env.DATABASE_URL)
-const photos = await sql`SELECT * FROM photos WHERE user_id = ${userId}`
-```
-
-**Upsides:** Full PostgreSQL compatibility (same schema and queries as Option 1), no connection management overhead, no VPC needed, scales to zero between requests.
-
-**Downsides:** External vendor dependency — Neon is not part of AWS. CDK cannot provision or manage it; credentials must be handled out-of-band. Adds vendor risk (pricing changes, availability, data residency). The 0.5 GB free tier is tighter than RDS's 20 GB. Not a fit if the requirement is to stay entirely within AWS.
+Rejected because it is an external vendor. CDK can't provision it, credentials are handled out-of-band, and the spec says "entirely on AWS".
 
 ---
 
-## Recommendation
+## Decision
 
-**Option 1 — RDS PostgreSQL.**
+**Option 2 — DynamoDB, single-table design, provisioned capacity inside the free tier.**
 
-The admin analytics requirements are the deciding factor. Aggregate queries, joins across users/photos/locations, and filtered pagination are natural SQL. DynamoDB can do this but requires a significantly more complex data model and separate aggregation infrastructure — complexity that isn't justified when the data is inherently relational.
+It is the only option that is both free indefinitely and inside AWS. The analytics concern is handled by keeping counters up to date in the same transaction as each write, and by two GSIs for the gallery and the location filter. No Streams pipeline or aggregation tables are needed.
 
-Neon is genuinely compelling from a Lambda integration standpoint, but it introduces a non-AWS vendor dependency that complicates the CDK deployment story and adds risk for a project where infrastructure reproducibility is a stated goal.
-
-The connection limit problem (Option 1's main downside) is already solved in the serverless ADR with reserved concurrency + tight pool hygiene. It's a known, bounded constraint — not a reason to choose a fundamentally different data model.
-
-### Upgrade path
-
-| Trigger | Action |
-|---|---|
-| Hitting 20 GB storage | Add a read replica or archive old photos to S3-only storage |
-| Connection saturation in production | Add RDS Proxy ($11/month) — already designed for in serverless ADR |
-| t2.micro CPU bottleneck | Upgrade to t3.small ($0.026/hour, ~$19/month) |
+Choosing DynamoDB also removes the RDS-driven parts of the serverless ADR: VPC, interface endpoints, Secrets Manager, connection pooling and the reserved-concurrency connection budget.
 
 ---
 
-## Schema
+## Design
 
-```sql
-CREATE TABLE users (
-  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  cognito_id  TEXT UNIQUE NOT NULL,
-  name        TEXT NOT NULL,
-  email       TEXT UNIQUE NOT NULL,
-  is_admin    BOOLEAN NOT NULL DEFAULT false,
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+### Table
 
-CREATE TABLE photos (
-  id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  s3_key       TEXT NOT NULL,
-  title        TEXT NOT NULL,
-  description  TEXT,
-  status       TEXT NOT NULL DEFAULT 'processing' CHECK (status IN ('processing', 'ready', 'failed')),
-  uploaded_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+One table per stage, `wildshoot-<stage>`, with keys `PK` / `SK` and two GSIs:
 
-CREATE TABLE locations (
-  id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  photo_id  UUID NOT NULL REFERENCES photos(id) ON DELETE CASCADE,
-  name      TEXT NOT NULL,
-  lat       NUMERIC(9, 6),
-  lng       NUMERIC(9, 6)
-);
+- `GSI1` (`GSI1PK` / `GSI1SK`) — type index: all photos, all users.
+- `GSI2` (`GSI2PK` / `GSI2SK`) — location index.
 
--- Indexes for common query patterns
-CREATE INDEX ON photos(user_id);
-CREATE INDEX ON photos(status, uploaded_at DESC);
-CREATE INDEX ON locations(name);
-```
+Photo ids are ULIDs, so sorting by id sorts by upload time.
+
+| Item             | PK           | SK                  | GSI1                          | GSI2                              | Attributes                                                                                            |
+| ---------------- | ------------ | ------------------- | ----------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| User             | `USER#<sub>` | `PROFILE`           | `USERS` / `<createdAt>#<sub>` | —                                 | name, email, photoCount, createdAt                                                                    |
+| Photo            | `USER#<sub>` | `PHOTO#<photoId>`   | `PHOTOS` / `<photoId>`        | `LOC#<locationKey>` / `<photoId>` | title, description, location, s3Key, status (`processing` / `ready` / `failed`), uploadedAt, userName |
+| Location counter | `STATS`      | `LOC#<locationKey>` | —                             | —                                 | name, photoCount                                                                                      |
+| Totals           | `STATS`      | `TOTALS`            | —                             | —                                 | users, photos                                                                                         |
+
+Notes:
+
+- `<sub>` is the Cognito user id, so no separate `cognito_id` mapping is needed.
+- `<locationKey>` is the location name, trimmed and lower-cased.
+- Admin rights come from the Cognito `admins` group only; there is no `isAdmin` attribute. The admin user list asks Cognito (`ListUsersInGroup`) which users are admins.
+
+### Access patterns
+
+| Need                                              | Operation                                                                                                                                                                                                       |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| List my photos, newest first                      | Query `PK = USER#<sub>`, `SK begins_with PHOTO#`, descending                                                                                                                                                    |
+| Get / update / delete my photo                    | Get / Update / Delete on (`USER#<caller>`, `PHOTO#<id>`). The owner is part of the key, so another user's photo simply isn't found (404).                                                                       |
+| Upload a photo                                    | One `TransactWriteItems`: put the photo; `ADD photoCount 1` on the user; `ADD photos 1` on totals; `ADD photoCount 1` on the location counter (created on first use)                                            |
+| Delete a photo                                    | The same transaction with `-1`                                                                                                                                                                                  |
+| Create a user (Cognito post-confirmation trigger) | Transaction: put the profile (`attribute_not_exists(PK)`), `ADD users 1` on totals                                                                                                                              |
+| Admin gallery, newest first, paginated            | Query `GSI1PK = PHOTOS`, descending                                                                                                                                                                             |
+| Admin filter by location                          | Query `GSI2PK = LOC#<locationKey>`, descending                                                                                                                                                                  |
+| Admin stats                                       | Get totals. Query `PK = STATS`, `SK begins_with LOC#`, then sort by photoCount in the Lambda for the top locations (the number of distinct locations is small). Total locations = counters with photoCount > 0. |
+| Admin user list with photo counts                 | Query `GSI1PK = USERS`                                                                                                                                                                                          |
+| Admin delete user                                 | Query `PK = USER#<sub>`, delete the items in batches, decrement the counters, delete the S3 objects, then `AdminDeleteUser`                                                                                     |
+
+All writes go through `lambda/_shared/ddb.ts`, so the counters can't be skipped by one handler. If they ever drift, a repair script rebuilds them from a scan.
+
+### Capacity budget
+
+The free tier's 25 WCU / 25 RCU is shared by every table and index in the region on the payer account, and staging and production both live in us-west-2. GSI capacity is billed as provisioned capacity, so it is budgeted in.
+
+| Per stage       | RCU    | WCU    |
+| --------------- | ------ | ------ |
+| Table           | 5      | 5      |
+| GSI1            | 4      | 4      |
+| GSI2            | 3      | 3      |
+| **Stage total** | **12** | **12** |
+| **Both stages** | **24** | **24** |
+
+- Fixed provisioned capacity, **no auto scaling** (it would scale past the free tier).
+- Default AWS-owned encryption key (a customer-managed KMS key is $1/month).
+- No point-in-time recovery or on-demand backups (both bill per GB). Production uses `RETAIN` and deletion protection instead.
+- A CDK assertion test fails the build if a stage's provisioned capacity exceeds 12 / 12.
+
+**What the cap means.** About 5 writes/s per stage sustained; DynamoDB also absorbs short bursts from up to 5 minutes of unused capacity. A transactional write costs double, and an upload transaction writes 4 items. That works out to roughly one upload every 1–2 seconds sustained, which is fine for the MVP. Beyond that, requests are throttled: the SDK retries, then the handler returns 429.
+
+**Payer-account caveat.** The allowance belongs to the payer account of the Organization. If other accounts on the same payer use provisioned DynamoDB capacity in us-west-2, they share it. An SCP blocks the free-tier usage API, so this can't be checked from this account.
+
+---
+
+## Upgrade path
+
+Every upgrade leaves the free tier, so each one needs an explicit decision. None of them is automatic.
+
+| Trigger                                     | Action                                             | Cost                             |
+| ------------------------------------------- | -------------------------------------------------- | -------------------------------- |
+| Sustained throttling                        | Raise provisioned capacity, or switch to on-demand | Per WCU/RCU-hour, or per request |
+| An analytics question counters can't answer | Export to S3 + Athena                              | Per export and per query         |
+| Need for backups                            | Point-in-time recovery                             | Per GB-month                     |
 
 ---
 
 ## References
 
-- [Amazon RDS free tier](https://aws.amazon.com/rds/free/)
-- [RDS PostgreSQL max_connections](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html)
-- [DynamoDB free tier](https://aws.amazon.com/dynamodb/pricing/on-demand/)
+- [DynamoDB pricing — provisioned capacity and free tier](https://aws.amazon.com/dynamodb/pricing/provisioned/)
 - [DynamoDB single-table design (AWS blog)](https://aws.amazon.com/blogs/compute/creating-a-single-table-design-with-amazon-dynamodb/)
-- [Neon serverless driver](https://neon.tech/docs/serverless/serverless-driver)
-- [node-postgres Pool API](https://node-postgres.com/apis/pool)
+- [DynamoDB transactions](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/transaction-apis.html)
+- [DynamoDB burst capacity](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/burst-adaptive-capacity.html)
+- [Confirming eligibility for the AWS Free Tier](https://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/free-tier-eligibility.html)
+- [Amazon RDS pricing](https://aws.amazon.com/rds/postgresql/pricing/)
