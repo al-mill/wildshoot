@@ -43,6 +43,16 @@ export class CiStack extends cdk.Stack {
       })
     );
 
+    // Lets the PR diff skip production until it's deployed
+    prRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['cloudformation:DescribeStacks'],
+        resources: [
+          `arn:aws:cloudformation:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:stack/wildshoot-production/*`,
+        ],
+      })
+    );
+
     new cdk.CfnOutput(this, 'PrRoleArn', {
       value: prRole.roleArn,
       description: 'Copy to the PR_ROLE_ARN repo secret in GitHub',

@@ -33,6 +33,19 @@ function splitStacks(lines) {
   return stacks;
 }
 
+// Stacks with nothing to fold: cdk's "no differences", and the line pr.yml
+// prints instead of diffing a stack that isn't deployed yet.
+const ONE_LINE_RESULTS = [
+  ['There were no differences', '✅ No changes'],
+  ['Not deployed yet', '⏭️ Not deployed yet, so not diffed'],
+];
+
+function oneLineResult(stack) {
+  return ONE_LINE_RESULTS.find(([marker]) =>
+    stack.lines.some(l => l.startsWith(marker))
+  )?.[1];
+}
+
 function tidy(lines) {
   return lines
     .filter(line => !NOISE.some(pattern => pattern.test(line)))
@@ -86,10 +99,7 @@ export function formatDiff(output, exitCode) {
 
   const diffs = new Map(
     stacks
-      .filter(
-        stack =>
-          !stack.lines.some(l => l.startsWith('There were no differences'))
-      )
+      .filter(stack => oneLineResult(stack) === undefined)
       .map(stack => [stack, tidy(stack.lines)])
   );
 
@@ -106,7 +116,7 @@ export function formatDiff(output, exitCode) {
 
   const sections = stacks.map(stack => {
     const diff = diffs.get(stack);
-    if (diff === undefined) return `**${stack.name}**: ✅ No changes`;
+    if (diff === undefined) return `**${stack.name}**: ${oneLineResult(stack)}`;
     return details(
       `<strong>${stack.name}</strong>: ${summarise(diff)}`,
       diff,

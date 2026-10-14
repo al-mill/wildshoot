@@ -56,13 +56,20 @@ jobs:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           CDK_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'us-west-2' }}
         # Staging is what merging changes; production shows settings only it has.
+        # Production is skipped until it exists, since its diff would be the whole template.
+        # Any other describe-stacks error falls through to the full diff.
         # Keep cdk's exit code (not tee's) so a failed synth shows in the comment.
         run: |
           set -o pipefail
+          production=$(aws cloudformation describe-stacks --stack-name wildshoot-production 2>&1 || true)
           status=0
           {
             npx cdk diff --context stage=staging 2>&1 &&
-              npx cdk diff Wildshoot-production --context stage=production 2>&1
+              if [[ $production == *'wildshoot-production does not exist'* ]]; then
+                printf 'Stack Wildshoot-production\nNot deployed yet\n'
+              else
+                npx cdk diff Wildshoot-production --context stage=production 2>&1
+              fi
           } | tee cdk-diff.txt || status=$?
           echo "status=$status" >> "$GITHUB_OUTPUT"
 

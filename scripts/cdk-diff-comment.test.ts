@@ -32,6 +32,18 @@ describe('formatDiff', () => {
     );
   });
 
+  it('gives a stack the workflow skipped as not deployed one line', () => {
+    const body = formatDiff(
+      output(...UNCHANGED, 'Stack Wildshoot-production', 'Not deployed yet'),
+      0
+    );
+
+    expect(body).toContain(
+      '**Wildshoot-production**: ⏭️ Not deployed yet, so not diffed'
+    );
+    expect(body).not.toContain('<details>');
+  });
+
   it('summarises a changed stack and folds its diff without the bundling noise', () => {
     const body = formatDiff(output(...UNCHANGED, ...CHANGED), 0);
 
