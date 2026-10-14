@@ -8,6 +8,12 @@ const template = Template.fromStack(
   new WildshootStack(new App(), 'Test', { stage: 'test' })
 );
 
+// For the whole account: about $1.41 at $3.50 per million calls, over a 31-day month.
+const MONTHLY_CALL_BUDGET = 402_000;
+const SECONDS_PER_MONTH = 31 * 24 * 60 * 60;
+// Staging and production deploy to the same account, each with its own API.
+const STAGES_PER_ACCOUNT = 2;
+
 const functionsWithEnv = (envVar: string) =>
   Object.values(
     template.findResources('AWS::Lambda::Function', {
@@ -59,6 +65,36 @@ describe('ApiConstruct', () => {
       Properties: { HttpMethod: 'GET' },
     });
     expect(Object.keys(gets)).toHaveLength(0);
+  });
+
+  it('caps calls across every method of both stages within the monthly budget', () => {
+    const stages = Object.values(
+      template.findResources('AWS::ApiGateway::Stage')
+    ).map(s => s.Properties);
+    expect(stages).toHaveLength(1);
+    const [stage] = stages;
+    // A per-method override would escape the sum below, so only the stage default is allowed.
+    expect(stage.MethodSettings).toEqual([
+      expect.objectContaining({ HttpMethod: '*', ResourcePath: '/*' }),
+    ]);
+    const [{ ThrottlingRateLimit: rate, ThrottlingBurstLimit: burst }] =
+      stage.MethodSettings;
+    const methods = Object.keys(
+      template.findResources('AWS::ApiGateway::Method')
+    ).length;
+    expect(
+      STAGES_PER_ACCOUNT * methods * (rate * SECONDS_PER_MONTH + burst)
+    ).toBeLessThanOrEqual(MONTHLY_CALL_BUDGET);
+  });
+
+  it('adds CORS preflight only to the routes the browser calls', () => {
+    const resources = template.toJSON().Resources;
+    const preflightPaths = Object.values(
+      template.findResources('AWS::ApiGateway::Method', {
+        Properties: { HttpMethod: 'OPTIONS' },
+      })
+    ).map(m => resources[m.Properties.ResourceId.Ref]?.Properties.PathPart);
+    expect(preflightPaths.sort()).toEqual(['login', 'logout', 'refresh']);
   });
 
   it('leaves CORS preflight unauthenticated', () => {

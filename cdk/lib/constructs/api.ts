@@ -15,6 +15,11 @@ interface ApiConstructProps {
 
 const LAMBDA_DIR = path.join(__dirname, '../../../lambda');
 
+// API Gateway gives every method its own bucket, so each stage's ceiling is this
+// rate times the method count. api.test.ts holds both stages to the account's budget.
+const METHOD_RATE_LIMIT = 0.0125;
+const METHOD_BURST_LIMIT = 10;
+
 export class ApiConstruct extends Construct {
   public readonly api: apigateway.RestApi;
 
@@ -55,13 +60,23 @@ export class ApiConstruct extends Construct {
 
     this.api = new apigateway.RestApi(this, 'RestApi', {
       restApiName: `wildshoot-${props.stage}`,
-      deployOptions: { stageName: props.stage },
-      defaultCorsPreflightOptions: {
-        allowOrigins: [props.allowedOrigin],
-        allowHeaders: ['Authorization', 'Content-Type'],
-        allowMethods: apigateway.Cors.ALL_METHODS,
+      deployOptions: {
+        stageName: props.stage,
+        throttlingRateLimit: METHOD_RATE_LIMIT,
+        throttlingBurstLimit: METHOD_BURST_LIMIT,
       },
     });
+
+    // Preflight only on routes the browser calls: each OPTIONS method is another
+    // billable throttle bucket.
+    const route = (parent: apigateway.IResource, pathPart: string) =>
+      parent.addResource(pathPart, {
+        defaultCorsPreflightOptions: {
+          allowOrigins: [props.allowedOrigin],
+          allowHeaders: ['Authorization', 'Content-Type'],
+          allowMethods: apigateway.Cors.ALL_METHODS,
+        },
+      });
 
     // Without CORS headers on gateway errors the browser reports a CORS failure
     // instead of the 401 that triggers a token refresh.
@@ -85,17 +100,19 @@ export class ApiConstruct extends Construct {
 
     // Login and refresh are how a caller gets a token, so only logout sits behind the authorizer.
     const auth = this.api.root.addResource('api').addResource('auth');
-    auth
-      .addResource('login')
-      .addMethod('POST', new apigateway.LambdaIntegration(loginFn));
-    auth
-      .addResource('refresh')
-      .addMethod('POST', new apigateway.LambdaIntegration(refreshFn));
-    auth
-      .addResource('logout')
-      .addMethod('POST', new apigateway.LambdaIntegration(logoutFn), {
-        authorizer,
-      });
+    route(auth, 'login').addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(loginFn)
+    );
+    route(auth, 'refresh').addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(refreshFn)
+    );
+    route(auth, 'logout').addMethod(
+      'POST',
+      new apigateway.LambdaIntegration(logoutFn),
+      { authorizer }
+    );
 
     new cdk.CfnOutput(this, 'ApiUrl', {
       value: this.api.url,
