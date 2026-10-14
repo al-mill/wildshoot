@@ -80,7 +80,7 @@ The Lambda authorizer gets the token, makes sure it's legit, and passes user inf
 
 **Good stuff:**
 
-- Free (stays in AWS free tier with 50k users/month)
+- Free up to 10k monthly active users on the Essentials plan the pool uses (amended 2026-10-14, was "50k users/month")
 - Don't have to build user management ourselves
 - Can do complex permission checks like photo ownership
 - User info available everywhere in our code

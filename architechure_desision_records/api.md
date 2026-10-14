@@ -114,6 +114,10 @@ Backend Services
   DELETE /users/{id} → Remove user account
 ```
 
+### Throttling
+
+(Added 2026-10-14.) API Gateway REST is the one paid item in the stack, at $3.50 per million calls. The stage default throttle is 0.025 req/s with bursts of 10, and API Gateway applies it to each method separately. With 6 methods that caps the API at about 402k calls a month (≈ $1.41). CORS preflight is added only to the routes the browser calls, because each `OPTIONS` method is another billable bucket. A test fails the build if a new route pushes the total over budget. See the cost guardrails ADR.
+
 ### Lambda Function Organization
 
 We're organizing by feature, not by HTTP method:
@@ -160,7 +164,7 @@ None needed (amended 2026-10-13). DynamoDB is one HTTPS call per request, signed
 
 ## Benefits
 
-**Cost Efficiency:** Free tier covers MVP entirely. At scale, pay only for actual usage.
+**Cost Efficiency:** Lambda and DynamoDB stay inside their Always Free offers. API Gateway is the one paid item, capped by throttling (amended 2026-10-14, was "Free tier covers MVP entirely"; see the cost guardrails ADR).
 
 **Auto-Scaling:** Handle traffic spikes without configuration. Black Friday photo uploads? AWS scales automatically.
 
@@ -177,6 +181,8 @@ None needed (amended 2026-10-13). DynamoDB is one HTTPS call per request, signed
 **Cold Starts:** First request to an idle Lambda takes 200-500ms. Mitigated by keeping functions warm during business hours.
 
 **Throughput Cap:** the free-tier DynamoDB capacity (12 WCU / 12 RCU per stage) allows about 5 writes/s per stage sustained. Requests over it are throttled to 429.
+
+**API Throttle:** each route handles about one call every 40 s sustained, with bursts of 10. The rate tightens as routes are added. Requests over it get a 429.
 
 **Vendor Lock-in:** Deeply integrated with AWS services. Migration to other cloud providers would require significant rewriting.
 
@@ -197,7 +203,7 @@ None needed (amended 2026-10-13). DynamoDB is one HTTPS call per request, signed
 - API response times under 500ms (95th percentile)
 - Photo upload success rate above 99.5%
 - Zero-downtime deployments
-- Stays within the AWS free tier, a hard requirement (amended 2026-10-13, was "under $50/month during first year")
+- Stays within the AWS free tier, a hard requirement, except API Gateway, which throttling caps at ≈ $1.41/month (up to ~$3.50 accepted). Amended 2026-10-13 and 2026-10-14; was "under $50/month during first year".
 - Development team can deploy new endpoints within one day
 
 ## Open items
