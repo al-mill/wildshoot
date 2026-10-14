@@ -116,7 +116,7 @@ Backend Services
 
 ### Throttling
 
-(Added 2026-10-14.) API Gateway REST is the one paid item in the stack, at $3.50 per million calls. The stage default throttle is 0.025 req/s with bursts of 10, and API Gateway applies it to each method separately. With 6 methods that caps the API at about 402k calls a month (≈ $1.41). CORS preflight is added only to the routes the browser calls, because each `OPTIONS` method is another billable bucket. A test fails the build if a new route pushes the total over budget. See the cost guardrails ADR.
+(Added 2026-10-14.) API Gateway REST is the one paid item in the stack, at $3.50 per million calls. The stage default throttle is 0.0125 req/s with bursts of 10, and API Gateway applies it to each method separately. Staging and production share the account, so with 6 methods each that caps both APIs together at about 402k calls a month (≈ $1.41). CORS preflight is added only to the routes the browser calls, because each `OPTIONS` method is another billable bucket. A test fails the build if a new route pushes the total over budget. See the cost guardrails ADR.
 
 ### Lambda Function Organization
 
@@ -182,7 +182,7 @@ None needed (amended 2026-10-13). DynamoDB is one HTTPS call per request, signed
 
 **Throughput Cap:** the free-tier DynamoDB capacity (12 WCU / 12 RCU per stage) allows about 5 writes/s per stage sustained. Requests over it are throttled to 429.
 
-**API Throttle:** each route handles about one call every 40 s sustained, with bursts of 10. The rate tightens as routes are added. Requests over it get a 429.
+**API Throttle:** each route handles about one call every 80 s sustained, with bursts of 10. The rate tightens as routes are added. Requests over it get a 429.
 
 **Vendor Lock-in:** Deeply integrated with AWS services. Migration to other cloud providers would require significant rewriting.
 
