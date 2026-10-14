@@ -8,9 +8,11 @@ const template = Template.fromStack(
   new WildshootStack(new App(), 'Test', { stage: 'test' })
 );
 
-// About $1.41 at $3.50 per million calls, over a 31-day month.
+// For the whole account: about $1.41 at $3.50 per million calls, over a 31-day month.
 const MONTHLY_CALL_BUDGET = 402_000;
 const SECONDS_PER_MONTH = 31 * 24 * 60 * 60;
+// Staging and production deploy to the same account, each with its own API.
+const STAGES_PER_ACCOUNT = 2;
 
 const functionsWithEnv = (envVar: string) =>
   Object.values(
@@ -65,7 +67,7 @@ describe('ApiConstruct', () => {
     expect(Object.keys(gets)).toHaveLength(0);
   });
 
-  it('caps calls across all methods within the monthly budget', () => {
+  it('caps calls across every method of both stages within the monthly budget', () => {
     const stages = Object.values(
       template.findResources('AWS::ApiGateway::Stage')
     ).map(s => s.Properties);
@@ -80,9 +82,9 @@ describe('ApiConstruct', () => {
     const methods = Object.keys(
       template.findResources('AWS::ApiGateway::Method')
     ).length;
-    expect(methods * (rate * SECONDS_PER_MONTH + burst)).toBeLessThanOrEqual(
-      MONTHLY_CALL_BUDGET
-    );
+    expect(
+      STAGES_PER_ACCOUNT * methods * (rate * SECONDS_PER_MONTH + burst)
+    ).toBeLessThanOrEqual(MONTHLY_CALL_BUDGET);
   });
 
   it('adds CORS preflight only to the routes the browser calls', () => {

@@ -15,9 +15,9 @@ interface ApiConstructProps {
 
 const LAMBDA_DIR = path.join(__dirname, '../../../lambda');
 
-// API Gateway gives every method its own bucket, so the API-wide ceiling is this
-// rate times the method count. api.test.ts holds that total to the monthly budget.
-const METHOD_RATE_LIMIT = 0.025;
+// API Gateway gives every method its own bucket, so each stage's ceiling is this
+// rate times the method count. api.test.ts holds both stages to the account's budget.
+const METHOD_RATE_LIMIT = 0.0125;
 const METHOD_BURST_LIMIT = 10;
 
 export class ApiConstruct extends Construct {
