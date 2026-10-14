@@ -105,3 +105,5 @@ amplify/
 
 # TernJS port file
 .tern-port
+# Local CDK diff preview (README → Deployment)
+cdk-diff.txt

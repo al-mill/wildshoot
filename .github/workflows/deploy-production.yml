@@ -23,13 +23,25 @@ jobs:
     environment: production
 
     steps:
+      # Backs up the environment's main-only rule, which lives in repo settings.
+      - name: Check the run is on main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Production deploys run from main only, not $GITHUB_REF"
+          exit 1
+
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.sha || github.ref }}
+          fetch-depth: 0
+
+      # The environment only checks the branch the run started from, not the sha input.
+      - name: Check the commit is on main
+        run: git merge-base --is-ancestor HEAD origin/main
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version-file: .nvmrc
           cache: 'npm'
 
       - run: npm ci
@@ -37,17 +49,21 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.DEPLOY_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION || 'us-west-2' }}
+          role-to-assume: ${{ secrets.DEPLOY_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-west-2' }}
 
       - name: Deploy to production
         env:
-          CDK_DEFAULT_ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
-          CDK_DEFAULT_REGION: ${{ vars.AWS_REGION || 'us-west-2' }}
-        run: npx cdk deploy --context stage=production --require-approval never
+          CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+          CDK_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'us-west-2' }}
+        run: npx cdk deploy Wildshoot-production --context stage=production --require-approval never
 
       - name: Summary
+        # Via env, not inline: sha is free text and would run as shell.
+        env:
+          COMMIT: ${{ inputs.sha || github.sha }}
+          ACTOR: ${{ github.actor }}
         run: |
           echo "### Deployed to production :white_check_mark:" >> $GITHUB_STEP_SUMMARY
-          echo "Commit: \`${{ inputs.sha || github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "Triggered by: @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "Commit: \`$COMMIT\`" >> $GITHUB_STEP_SUMMARY
+          echo "Triggered by: @$ACTOR" >> $GITHUB_STEP_SUMMARY

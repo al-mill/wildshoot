@@ -43,12 +43,22 @@ export class CiStack extends cdk.Stack {
       })
     );
 
+    // Lets the PR diff skip production until it's deployed
+    prRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['cloudformation:DescribeStacks'],
+        resources: [
+          `arn:aws:cloudformation:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:stack/wildshoot-production/*`,
+        ],
+      })
+    );
+
     new cdk.CfnOutput(this, 'PrRoleArn', {
       value: prRole.roleArn,
-      description: 'Copy to PR_ROLE_ARN repo variable in GitHub',
+      description: 'Copy to the PR_ROLE_ARN repo secret in GitHub',
     });
 
-    // Only the "production" GitHub environment can assume this role
+    // Only the "staging" and "production" GitHub environments can assume this role
     const deployRole = new iam.Role(this, 'DeployRole', {
       roleName: 'wildshoot-github-deploy',
       assumedBy: new iam.WebIdentityPrincipal(
@@ -56,7 +66,10 @@ export class CiStack extends cdk.Stack {
         {
           StringEquals: {
             'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com',
-            'token.actions.githubusercontent.com:sub': `repo:${githubOrg}/${githubRepo}:environment:production`,
+            'token.actions.githubusercontent.com:sub': [
+              `repo:${githubOrg}/${githubRepo}:environment:staging`,
+              `repo:${githubOrg}/${githubRepo}:environment:production`,
+            ],
           },
         }
       ),
@@ -67,8 +80,7 @@ export class CiStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, 'DeployRoleArn', {
       value: deployRole.roleArn,
-      description:
-        'Copy to DEPLOY_ROLE_ARN variable in the GitHub production environment',
+      description: 'Copy to the DEPLOY_ROLE_ARN repo secret in GitHub',
     });
   }
 }

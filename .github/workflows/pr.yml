@@ -19,7 +19,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version-file: .nvmrc
           cache: 'npm'
 
       - run: npm ci
@@ -39,7 +39,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version-file: .nvmrc
           cache: 'npm'
 
       - run: npm ci
@@ -55,21 +55,40 @@ jobs:
         env:
           CDK_DEFAULT_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
           CDK_DEFAULT_REGION: ${{ secrets.AWS_REGION || 'us-west-2' }}
+        # Staging is what merging changes; production shows settings only it has.
+        # Production is skipped until it's deployed, since its diff would be the whole template.
+        # A diff's change set leaves a never-deployed stack in REVIEW_IN_PROGRESS.
+        # Any other describe-stacks error falls through to the full diff.
+        # Keep cdk's exit code (not tee's) so a failed synth shows in the comment.
         run: |
-          OUTPUT=$(npx cdk diff --context stage=production 2>&1 || true)
-          echo "diff<<__OUTPUT__" >> $GITHUB_OUTPUT
-          echo "$OUTPUT" >> $GITHUB_OUTPUT
-          echo "__OUTPUT__" >> $GITHUB_OUTPUT
+          set -o pipefail
+          production=$(aws cloudformation describe-stacks --stack-name wildshoot-production \
+            --query 'Stacks[0].StackStatus' --output text 2>&1 || true)
+          status=0
+          {
+            npx cdk diff --context stage=staging 2>&1 &&
+              if [[ $production == REVIEW_IN_PROGRESS || $production == *'does not exist'* ]]; then
+                printf 'Stack Wildshoot-production\nNot deployed yet\n'
+              else
+                npx cdk diff Wildshoot-production --context stage=production 2>&1
+              fi
+          } | tee cdk-diff.txt || status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
 
       - name: Post diff to PR
         uses: actions/github-script@v7
-        # Via env, not inline: the diff contains ${...} placeholders that would run as JS.
         env:
-          DIFF: ${{ steps.cdk_diff.outputs.diff }}
+          DIFF_STATUS: ${{ steps.cdk_diff.outputs.status }}
         with:
           script: |
-            const diff = process.env.DIFF;
-            const body = `## Infrastructure diff\n\n\`\`\`\n${diff}\n\`\`\`\n\n> Deploy is manual — nothing changes until you trigger the production workflow.`;
+            const { readFileSync } = require('fs');
+            const { formatDiff, HEADER } = await import(
+              `${process.env.GITHUB_WORKSPACE}/scripts/cdk-diff-comment.mjs`
+            );
+            const body = formatDiff(
+              readFileSync('cdk-diff.txt', 'utf8'),
+              Number(process.env.DIFF_STATUS)
+            );
 
             const comments = await github.rest.issues.listComments({
               owner: context.repo.owner,
@@ -79,7 +98,7 @@ jobs:
 
             const existing = comments.data.find(c =>
               c.user.login === 'github-actions[bot]' &&
-              c.body.startsWith('## Infrastructure diff')
+              c.body.startsWith(HEADER)
             );
 
             if (existing) {
@@ -97,6 +116,11 @@ jobs:
                 body,
               });
             }
+
+      # After the comment, so a failed diff is both posted and a red check.
+      - name: Fail if cdk diff failed
+        if: steps.cdk_diff.outputs.status != '0'
+        run: exit 1
 
   changes:
     name: Summarise changed services
