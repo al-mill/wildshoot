@@ -66,9 +66,11 @@ describe('ApiConstruct', () => {
   });
 
   it('caps calls across all methods within the monthly budget', () => {
-    const [stage] = Object.values(
+    const stages = Object.values(
       template.findResources('AWS::ApiGateway::Stage')
     ).map(s => s.Properties);
+    expect(stages).toHaveLength(1);
+    const [stage] = stages;
     // A per-method override would escape the sum below, so only the stage default is allowed.
     expect(stage.MethodSettings).toEqual([
       expect.objectContaining({ HttpMethod: '*', ResourcePath: '/*' }),
